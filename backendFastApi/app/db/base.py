@@ -4,4 +4,4 @@ Base = declarative_base()
 
 # Importa los modelos para que Alembic detecte las tablas al generar migraciones
 # (se importan aquí para evitar problemas de orden de importación)
-from app.models import establecimiento  # noqa: F401
+from app.models import establecimiento, usuario, rol  # noqa: F401

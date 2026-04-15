@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -30,5 +31,4 @@ class EstablecimientoUpdate(BaseModel):
 class EstablecimientoOut(EstablecimientoBase):
 	id_establecimiento: int
 
-	class Config:
-		orm_mode = True
+	model_config = ConfigDict(from_attributes=True)

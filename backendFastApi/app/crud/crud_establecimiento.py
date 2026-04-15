@@ -23,9 +23,14 @@ def create_establecimiento(
     lat = data.pop("latitud", None)
     lon = data.pop("longitud", None)
     if lat is not None and lon is not None:
+        # Use WKTElement to create a geometry value with SRID so SQLAlchemy stores it properly
         data["coordenadas"] = WKTElement(f"POINT({lon} {lat})", srid=4326)
-    if verificador_id is not None:
-        data["verificador_id"] = verificador_id
+
+    # Allow verificador_id to come either from the optional arg or from the request body
+    body_verificador = data.get("verificador_id")
+    verificador = verificador_id if verificador_id is not None else body_verificador
+    if verificador is not None:
+        data["verificador_id"] = verificador
         data["ultima_verificacion"] = datetime.utcnow()
 
     db_obj = Establecimiento(**data)

@@ -8,6 +8,13 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# Validate DATABASE_URL early and give a helpful error message
+if not DATABASE_URL:
+    raise RuntimeError(
+        "DATABASE_URL no está configurada. Añade DATABASE_URL a tu .env o a las variables de entorno. "
+        "Ejemplo: DATABASE_URL='postgresql+psycopg://user:pass@localhost:5432/dbname'"
+    )
+
 # El engine es el puente real a la base de datos
 engine = create_engine(DATABASE_URL)
 
