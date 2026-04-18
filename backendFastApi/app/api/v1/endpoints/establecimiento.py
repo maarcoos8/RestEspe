@@ -1,6 +1,6 @@
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 
@@ -11,10 +11,32 @@ from app.schemas.establecimiento import (
     EstablecimientoCreate,
     EstablecimientoUpdate,
 )
+from app.schemas.establecimiento_filtro import EstablecimientoFiltroOut, PuntuacionMediaOut
 from sqlalchemy import select
 from sqlalchemy import func as sa_func
 
 router = APIRouter(prefix="/establecimiento", tags=["Establecimiento"])
+
+
+@router.get("/filtrar", response_model=List[EstablecimientoFiltroOut])
+def filtrar_establecimientos(
+    latitud: Optional[float] = Query(default=None),
+    longitud: Optional[float] = Query(default=None),
+    distancia_metros: Optional[float] = Query(default=None, gt=0),
+    tipo_establecimiento_ids: Optional[List[int]] = Query(default=None),
+    nombre: Optional[str] = Query(default=None),
+    categoria_dieta_ids: Optional[List[int]] = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    return crud.crud_establecimiento.get_establecimientos_filtrados(
+        db,
+        latitud=latitud,
+        longitud=longitud,
+        distancia_metros=distancia_metros,
+        tipos_establecimiento_ids=tipo_establecimiento_ids,
+        nombre=nombre,
+        categorias_dieta_ids=categoria_dieta_ids,
+    )
 
 
 @router.get("/", response_model=List[EstablecimientoOut])
@@ -79,6 +101,16 @@ def leer_establecimiento(id: int, db: Session = Depends(get_db)):
         "ultima_verificacion": row.ultima_verificacion,
         "verificador_id": row.verificador_id,
     }
+
+
+@router.get("/{id}/puntuacion-media", response_model=PuntuacionMediaOut)
+def puntuacion_media_establecimiento(id: int, db: Session = Depends(get_db)):
+    obj = crud.crud_establecimiento.get_establecimiento(db, id)
+    if not obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Establecimiento no encontrado")
+
+    puntuacion_media = crud.crud_establecimiento.get_puntuacion_media_establecimiento(db, id)
+    return {"id_establecimiento": id, "puntuacion_media": puntuacion_media}
 
 
 @router.post("/", response_model=EstablecimientoOut, status_code=status.HTTP_201_CREATED)

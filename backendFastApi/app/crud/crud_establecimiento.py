@@ -1,11 +1,45 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy.orm import Session
 from geoalchemy2.elements import WKTElement
+from sqlalchemy import distinct, func
+from sqlalchemy.orm import Session
 
 from app.models.establecimiento import Establecimiento
+from app.models.establecimiento_categoria import EstablecimientoCategoria
+from app.models.establecimiento_tipo import EstablecimientoTipo
+from app.models.resena import Resena
 from app.schemas.establecimiento import EstablecimientoCreate, EstablecimientoUpdate
+
+
+def _base_establecimiento_filtrado_query(db: Session):
+    puntuacion_media_subq = (
+        db.query(
+            Resena.id_establecimiento.label("id_establecimiento"),
+            func.avg(Resena.puntuacion).label("puntuacion_media"),
+        )
+        .group_by(Resena.id_establecimiento)
+        .subquery()
+    )
+
+    query = (
+        db.query(
+            Establecimiento.id_establecimiento.label("id_establecimiento"),
+            Establecimiento.nombre.label("nombre"),
+            Establecimiento.direccion_texto.label("direccion_texto"),
+            func.ST_Y(Establecimiento.coordenadas).label("latitud"),
+            func.ST_X(Establecimiento.coordenadas).label("longitud"),
+            Establecimiento.estado_verificado.label("estado_verificado"),
+            Establecimiento.ultima_verificacion.label("ultima_verificacion"),
+            Establecimiento.verificador_id.label("verificador_id"),
+            puntuacion_media_subq.c.puntuacion_media.label("puntuacion_media"),
+        )
+        .outerjoin(
+            puntuacion_media_subq,
+            puntuacion_media_subq.c.id_establecimiento == Establecimiento.id_establecimiento,
+        )
+    )
+    return query
 
 
 def get_establecimiento(db: Session, id_establecimiento: int) -> Optional[Establecimiento]:
@@ -14,6 +48,72 @@ def get_establecimiento(db: Session, id_establecimiento: int) -> Optional[Establ
 
 def get_establecimientos(db: Session, skip: int = 0, limit: int = 100) -> List[Establecimiento]:
     return db.query(Establecimiento).offset(skip).limit(limit).all()
+
+
+def get_puntuacion_media_establecimiento(db: Session, id_establecimiento: int) -> Optional[float]:
+    puntuacion_media = (
+        db.query(func.avg(Resena.puntuacion))
+        .filter(Resena.id_establecimiento == id_establecimiento)
+        .scalar()
+    )
+    return float(puntuacion_media) if puntuacion_media is not None else None
+
+
+def get_establecimientos_filtrados(
+    db: Session,
+    latitud: Optional[float] = None,
+    longitud: Optional[float] = None,
+    distancia_metros: Optional[float] = None,
+    tipos_establecimiento_ids: Optional[List[int]] = None,
+    nombre: Optional[str] = None,
+    categorias_dieta_ids: Optional[List[int]] = None,
+):
+    query = _base_establecimiento_filtrado_query(db)
+
+    if nombre:
+        query = query.filter(Establecimiento.nombre.ilike(f"%{nombre}%"))
+
+    if latitud is not None and longitud is not None and distancia_metros is not None:
+        punto = func.ST_SetSRID(func.ST_MakePoint(longitud, latitud), 4326)
+        query = query.filter(func.ST_DistanceSphere(Establecimiento.coordenadas, punto) <= distancia_metros)
+
+    if tipos_establecimiento_ids:
+        tipos_unicos = list(dict.fromkeys(tipos_establecimiento_ids))
+        subquery_tipos = (
+            db.query(EstablecimientoTipo.id_establecimiento)
+            .filter(EstablecimientoTipo.id_tipo_establecimiento.in_(tipos_unicos))
+            .group_by(EstablecimientoTipo.id_establecimiento)
+            .having(func.count(distinct(EstablecimientoTipo.id_tipo_establecimiento)) == len(tipos_unicos))
+        )
+        query = query.filter(Establecimiento.id_establecimiento.in_(subquery_tipos))
+
+    if categorias_dieta_ids:
+        categorias_unicas = list(dict.fromkeys(categorias_dieta_ids))
+        subquery_categorias = (
+            db.query(EstablecimientoCategoria.id_establecimiento)
+            .filter(EstablecimientoCategoria.id_categoria.in_(categorias_unicas))
+            .group_by(EstablecimientoCategoria.id_establecimiento)
+            .having(func.count(distinct(EstablecimientoCategoria.id_categoria)) == len(categorias_unicas))
+        )
+        query = query.filter(Establecimiento.id_establecimiento.in_(subquery_categorias))
+
+    rows = query.all()
+    result = []
+    for row in rows:
+        result.append(
+            {
+                "id_establecimiento": row.id_establecimiento,
+                "nombre": row.nombre,
+                "direccion_texto": row.direccion_texto,
+                "latitud": float(row.latitud) if row.latitud is not None else None,
+                "longitud": float(row.longitud) if row.longitud is not None else None,
+                "estado_verificado": row.estado_verificado,
+                "ultima_verificacion": row.ultima_verificacion,
+                "verificador_id": row.verificador_id,
+                "puntuacion_media": float(row.puntuacion_media) if row.puntuacion_media is not None else None,
+            }
+        )
+    return result
 
 
 def create_establecimiento(
