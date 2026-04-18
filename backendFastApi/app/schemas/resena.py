@@ -21,6 +21,7 @@ class ResenaBase(BaseModel):
     id_establecimiento: int
     puntuacion: float
     comentario: Optional[str] = None
+    url_imagen: Optional[str] = None
 
     @field_validator("puntuacion")
     def check_puntuacion(cls, v):
@@ -34,6 +35,7 @@ class ResenaCreate(ResenaBase):
 class ResenaUpdate(BaseModel):
     puntuacion: Optional[float] = None
     comentario: Optional[str] = None
+    url_imagen: Optional[str] = None
 
     @field_validator("puntuacion")
     def check_puntuacion(cls, v):

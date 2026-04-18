@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, Float, Text, DateTime, CheckConstraint
+from sqlalchemy import Column, Integer, ForeignKey, Float, Text, DateTime, CheckConstraint, String
 from sqlalchemy.sql import func
 from app.db.base import Base
 
@@ -14,4 +14,5 @@ class Resena(Base):
     id_establecimiento = Column(Integer, ForeignKey("establecimiento.id_establecimiento"), nullable=False)
     puntuacion = Column(Float, nullable=False)
     comentario = Column(Text, nullable=True)
+    url_imagen = Column(String(512), nullable=True)
     fecha_publicacion = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

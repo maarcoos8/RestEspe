@@ -48,7 +48,7 @@ A continuación, se detalla el diseño relacional del sistema:
 *   **`Establecimiento_Categoria`**: Tabla intermedia N:M entre Establecimiento y Categoria_Dieta (Define el filtrado a nivel de local).
 *   **`Item_Menu`**: (id_item_menu, nombre_item_menu, descripcion, precio, id_establecimiento [FK]).
 *   **`Plato_Categoria`**: Tabla intermedia N:M entre Item_Menu y Categoria_Dieta (Define los iconos a nivel de plato en la carta).
-*   **`Reseña`**: (id_reseña, id_usuario [FK], id_establecimiento [FK], puntuacion, comentario, fecha_publicacion).
+*   **`Reseña`**: (id_reseña, id_usuario [FK], id_establecimiento [FK], puntuacion, comentario, fecha_publicacion), url_imagen(opcional).
 *   **`Fotografia`**: (id_foto, id_establecimiento [FK], id_usuario [FK], url_imagen [VARCHAR - URL externa Cloudinary], fecha_subida).
 
 ## 6. Reglas y Lógica de Negocio Clave
