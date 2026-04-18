@@ -44,10 +44,13 @@ A continuación, se detalla el diseño relacional del sistema:
 *   **`Rol`**: (id_rol, nombre_rol).
 *   **`Usuario`**: (id_usuario, email [UNIQUE], nombre_completo, fotoPerfil (URL de la foto de perfil del proveedor OAuth),id_rol [FK]). *Nota: Inicio de sesión delegado a Google OAuth 2.0.*
 *   **`Establecimiento`**: (id_establecimiento, nombre, direccion_texto, coordenadas [GEOMETRY(Point, 4326)], estado_verificado [BOOLEAN], ultima_verificacion(timestamp de cuando se subieron los ultimos datos), verificador[FK a Usuario] (se guarda la ultima persona que haya verificado y subido los datos)).
-*   **`Categoria_Dieta`**: (id_categoria, nombre_dieta). Catálogo estático (ej. Vegana, Sin Gluten).
+*   **`Categoria_Dieta`**: (id_categoria_dieta, nombre_dieta). Catálogo estático (ej. Vegana, Sin Gluten).
+*   **`Tipo_Item_Menu`**: (id_tipo_item, id_establecimiento [FK],nombre_tipo). Permite crear un catálogo de tipos de items del menú para cada establecimiento (ej. Bebida, Entrantes).
+*   **`Tipo_Establecimiento`**: (id_tipo_establecimiento, nombre_categoria). Catálogo estático (ej. Pizzeria, Comida rápida).
 *   **`Establecimiento_Categoria`**: Tabla intermedia N:M entre Establecimiento y Categoria_Dieta (Define el filtrado a nivel de local).
-*   **`Item_Menu`**: (id_item_menu, nombre_item_menu, descripcion, precio, id_establecimiento [FK]).
-*   **`Plato_Categoria`**: Tabla intermedia N:M entre Item_Menu y Categoria_Dieta (Define los iconos a nivel de plato en la carta).
+*   **`Establecimiento_Tipo`**: Tabla intermedia N:M entre Establecimiento y Tipo_Establecimiento (Define el filtrado a nivel de local).
+*   **`Item_Menu`**: (id_item_menu, nombre_item_menu, descripcion, precio, id_establecimiento [FK], id_tipo_item_menu [FK]).
+*   **`Item_Categoria`**: Tabla intermedia N:M entre Item_Menu y Categoria_Dieta (Define los iconos a nivel de plato en la carta).
 *   **`Reseña`**: (id_reseña, id_usuario [FK], id_establecimiento [FK], puntuacion, comentario, fecha_publicacion), url_imagen(opcional).
 *   **`Fotografia`**: (id_foto, id_establecimiento [FK], id_usuario [FK], url_imagen [VARCHAR - URL externa Cloudinary], fecha_subida).
 

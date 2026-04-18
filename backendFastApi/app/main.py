@@ -3,7 +3,12 @@ from fastapi import FastAPI
 from app.api.v1.endpoints import (
 	establecimiento,
 	establecimiento_categoria as establecimiento_categoria_endpoint,
+	establecimiento_tipo as establecimiento_tipo_endpoint,
+	item_categoria as item_categoria_endpoint,
+	item_menu as item_menu_endpoint,
 	db as db_endpoint,
+	tipo_establecimiento as tipo_establecimiento_endpoint,
+	tipo_item_menu as tipo_item_menu_endpoint,
 	rol as rol_endpoint,
 	resena as resena_endpoint,
 	categoria_dieta as categoria_dieta_endpoint,
@@ -27,7 +32,17 @@ app.include_router(resena_endpoint.router, prefix="/api/v1")
 app.include_router(categoria_dieta_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de relacion Establecimiento-Categoria
 app.include_router(establecimiento_categoria_endpoint.router, prefix="/api/v1")
+# Registrar el endpoint de relacion Establecimiento-Tipo
+app.include_router(establecimiento_tipo_endpoint.router, prefix="/api/v1")
+# Registrar el endpoint de Tipo Establecimiento
+app.include_router(tipo_establecimiento_endpoint.router, prefix="/api/v1")
+# Registrar el endpoint de Tipo Item Menu
+app.include_router(tipo_item_menu_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de Fotografia
 app.include_router(fotografia_endpoint.router, prefix="/api/v1")
+# Registrar el endpoint de Item Menu
+app.include_router(item_menu_endpoint.router, prefix="/api/v1")
+# Registrar el endpoint de relacion Item-Categoria
+app.include_router(item_categoria_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de comprobación de BD en raíz: `/bd`
 app.include_router(db_endpoint.router, prefix="")
