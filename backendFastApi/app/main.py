@@ -6,6 +6,7 @@ from app.api.v1.endpoints import (
 	rol as rol_endpoint,
 	resena as resena_endpoint,
 	categoria_dieta as categoria_dieta_endpoint,
+	fotografia as fotografia_endpoint,
 )
 from app.db.session import engine
 from app.db.base import Base
@@ -23,5 +24,7 @@ app.include_router(rol_endpoint.router, prefix="/api/v1")
 app.include_router(resena_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de Categoria Dieta
 app.include_router(categoria_dieta_endpoint.router, prefix="/api/v1")
+# Registrar el endpoint de Fotografia
+app.include_router(fotografia_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de comprobación de BD en raíz: `/bd`
 app.include_router(db_endpoint.router, prefix="")
