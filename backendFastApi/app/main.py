@@ -2,6 +2,7 @@
 from fastapi import FastAPI
 from app.api.v1.endpoints import (
 	establecimiento,
+	establecimiento_categoria as establecimiento_categoria_endpoint,
 	db as db_endpoint,
 	rol as rol_endpoint,
 	resena as resena_endpoint,
@@ -24,6 +25,8 @@ app.include_router(rol_endpoint.router, prefix="/api/v1")
 app.include_router(resena_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de Categoria Dieta
 app.include_router(categoria_dieta_endpoint.router, prefix="/api/v1")
+# Registrar el endpoint de relacion Establecimiento-Categoria
+app.include_router(establecimiento_categoria_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de Fotografia
 app.include_router(fotografia_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de comprobación de BD en raíz: `/bd`
