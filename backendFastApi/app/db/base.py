@@ -13,6 +13,7 @@ from app.models import (  # noqa: F401
 	fotografia,
 	establecimiento_categoria,
 	establecimiento_tipo,
+	usuario_establecimiento_favorito,
 	tipo_establecimiento,
 	tipo_item_menu,
 	item_menu,

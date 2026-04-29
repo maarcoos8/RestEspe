@@ -49,6 +49,7 @@ A continuación, se detalla el diseño relacional del sistema:
 *   **`Tipo_Establecimiento`**: (id_tipo_establecimiento, nombre_categoria). Catálogo estático (ej. Pizzeria, Comida rápida).
 *   **`Establecimiento_Categoria`**: Tabla intermedia N:M entre Establecimiento y Categoria_Dieta (Define el filtrado a nivel de local).
 *   **`Establecimiento_Tipo`**: Tabla intermedia N:M entre Establecimiento y Tipo_Establecimiento (Define el filtrado a nivel de local).
+*   **`Usuario_Establecimiento_Favorito`**: Tabla intermedia N:M entre Usuario y Establecimiento para persistir los favoritos de cada usuario.
 *   **`Item_Menu`**: (id_item_menu, nombre_item_menu, descripcion, precio, id_establecimiento [FK], id_tipo_item_menu [FK]).
 *   **`Item_Categoria`**: Tabla intermedia N:M entre Item_Menu y Categoria_Dieta (Define los iconos a nivel de plato en la carta).
 *   **`Reseña`**: (id_reseña, id_usuario [FK], id_establecimiento [FK], puntuacion, comentario, fecha_publicacion), url_imagen(opcional).
@@ -58,3 +59,4 @@ A continuación, se detalla el diseño relacional del sistema:
 1.  **Motor de Filtrado:** La búsqueda de restaurantes debe poder cruzar simultáneamente el área espacial (coordenadas del usuario + radio) y múltiples etiquetas dietéticas (Tabla `Establecimiento_Categoria`).
 2.  **Estado Verificado:** El atributo booleano `estado_verificado` en la tabla Establecimiento es vital. La UI en Flutter debe destacarlo visualmente (ej. marcador especial en el mapa o insignia en la ficha). Solo Propietarios, Administradores Globales y SuperAdmins pueden alterar este estado.
 3.  **Manejo Espacial:** Siempre que se interactúe con ubicaciones, el Backend debe transformar las latitudes y longitudes estándar recibidas del Frontend al formato de geometría espacial requerido por PostGIS (`SRID=4326`).
+4.  **Favoritos de Usuario:** Las relaciones usuario-establecimiento que representen favoritos deben modelarse con una tabla puente dedicada, siguiendo el mismo patrón que `Establecimiento_Categoria` y `Establecimiento_Tipo`. Si se añade una relación de este tipo, hay que registrar el modelo en `app/db/base.py`, exportar el CRUD en `app/crud/__init__.py` y exponerlo con un router en `app/api/v1/endpoints/`.

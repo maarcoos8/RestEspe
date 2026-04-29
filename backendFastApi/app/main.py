@@ -4,6 +4,7 @@ from app.api.v1.endpoints import (
 	establecimiento,
 	establecimiento_categoria as establecimiento_categoria_endpoint,
 	establecimiento_tipo as establecimiento_tipo_endpoint,
+	usuario_establecimiento_favorito as usuario_establecimiento_favorito_endpoint,
 	item_categoria as item_categoria_endpoint,
 	item_menu as item_menu_endpoint,
 	db as db_endpoint,
@@ -34,6 +35,8 @@ app.include_router(categoria_dieta_endpoint.router, prefix="/api/v1")
 app.include_router(establecimiento_categoria_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de relacion Establecimiento-Tipo
 app.include_router(establecimiento_tipo_endpoint.router, prefix="/api/v1")
+# Registrar el endpoint de favoritos de usuario
+app.include_router(usuario_establecimiento_favorito_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de Tipo Establecimiento
 app.include_router(tipo_establecimiento_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de Tipo Item Menu
