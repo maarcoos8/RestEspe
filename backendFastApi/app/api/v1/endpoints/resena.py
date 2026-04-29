@@ -15,6 +15,11 @@ def leer_resenas(db: Session = Depends(get_db)):
     return crud.crud_resena.get_resenas(db)
 
 
+@router.get("/establecimiento/{id_establecimiento}", response_model=List[ResenaOut])
+def leer_resenas_por_establecimiento(id_establecimiento: int, db: Session = Depends(get_db)):
+    return crud.crud_resena.get_resenas_por_establecimiento(db, id_establecimiento)
+
+
 @router.get("/{id}", response_model=ResenaOut)
 def leer_resena(id: int, db: Session = Depends(get_db)):
     obj = crud.crud_resena.get_resena(db, id)

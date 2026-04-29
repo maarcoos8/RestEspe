@@ -15,6 +15,11 @@ def leer_fotografias(db: Session = Depends(get_db)):
     return crud.crud_fotografia.get_fotografias(db)
 
 
+@router.get("/establecimiento/{id_establecimiento}", response_model=List[FotografiaOut])
+def leer_fotografias_por_establecimiento(id_establecimiento: int, db: Session = Depends(get_db)):
+    return crud.crud_fotografia.get_fotografias_por_establecimiento(db, id_establecimiento)
+
+
 @router.get("/{id}", response_model=FotografiaOut)
 def leer_fotografia(id: int, db: Session = Depends(get_db)):
     obj = crud.crud_fotografia.get_fotografia(db, id)

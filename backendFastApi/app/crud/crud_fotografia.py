@@ -16,6 +16,15 @@ def get_fotografias(db: Session) -> List[Fotografia]:
     return db.query(Fotografia).all()
 
 
+def get_fotografias_por_establecimiento(db: Session, id_establecimiento: int) -> List[Fotografia]:
+    return (
+        db.query(Fotografia)
+        .filter(Fotografia.id_establecimiento == id_establecimiento)
+        .order_by(Fotografia.fecha_subida.desc())
+        .all()
+    )
+
+
 def create_fotografia(db: Session, fotografia_in: FotografiaCreate) -> Fotografia:
     if not db.query(Usuario).filter(Usuario.id_usuario == fotografia_in.id_usuario).first():
         raise ValueError("Usuario no encontrado")

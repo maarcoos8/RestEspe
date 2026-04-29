@@ -16,6 +16,15 @@ def get_resenas(db: Session) -> List[Resena]:
     return db.query(Resena).all()
 
 
+def get_resenas_por_establecimiento(db: Session, id_establecimiento: int) -> List[Resena]:
+    return (
+        db.query(Resena)
+        .filter(Resena.id_establecimiento == id_establecimiento)
+        .order_by(Resena.fecha_publicacion.desc())
+        .all()
+    )
+
+
 def create_resena(db: Session, resena_in: ResenaCreate) -> Resena:
     # validate FK existence
     if not db.query(Usuario).filter(Usuario.id_usuario == resena_in.id_usuario).first():
