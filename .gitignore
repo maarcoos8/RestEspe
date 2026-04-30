@@ -1,4 +1,32 @@
+# --- BACKEND (Python/FastAPI) ---
 backendFastApi/.env
-/backendFastApi/venv
-# Para ignorar todos los archivos __pycache__
-__pycache__/
+backendFastApi/venv/
+backendFastApi/__pycache__/
+*.py[cod]
+
+# --- FRONTEND (Flutter) ---
+# Ignora las carpetas de construcción y herramientas de Dart
+frontendflutter/.dart_tool/
+frontendflutter/.flutter-plugins
+frontendflutter/.flutter-plugins-dependencies
+frontendflutter/.pub-cache/
+frontendflutter/.pub/
+frontendflutter/build/
+
+# Ignora archivos específicos de Android/iOS dentro de la carpeta frontend
+frontendflutter/ios/Flutter/.last_build_id
+frontendflutter/android/app/debug/
+frontendflutter/android/app/profile/
+frontendflutter/android/app/release/
+
+# --- IDEs y SISTEMA (General) ---
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs y temporales
+*.log
