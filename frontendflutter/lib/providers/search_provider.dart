@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../data/models/search_models.dart';
@@ -16,16 +17,21 @@ class SearchProvider extends ChangeNotifier {
   bool _isLoading = false;
   List<SearchLocationResult> _locations = const [];
   List<SearchRestaurantResult> _restaurants = const [];
+  List<SearchRestaurantResult> _visibleRestaurants = const [];
   MapFocusRequest? _focusRequest;
   LatLng? _referencePoint;
+  LatLngBounds? _viewportBounds;
   int _focusToken = 0;
   int _searchGeneration = 0;
+  int _viewportGeneration = 0;
   final Distance _distance = const Distance();
+  Timer? _viewportDebounceTimer;
 
   String get query => _query;
   bool get isLoading => _isLoading;
   List<SearchLocationResult> get locations => _locations;
   List<SearchRestaurantResult> get restaurants => _restaurants;
+  List<SearchRestaurantResult> get visibleRestaurants => _visibleRestaurants;
   MapFocusRequest? get focusRequest => _focusRequest;
 
   bool get hasResults => _locations.isNotEmpty || _restaurants.isNotEmpty;
@@ -46,6 +52,14 @@ class SearchProvider extends ChangeNotifier {
 
     _sortResultsByProximity();
     notifyListeners();
+  }
+
+  void updateViewportBounds(LatLngBounds bounds) {
+    _viewportBounds = bounds;
+    _viewportDebounceTimer?.cancel();
+    _viewportDebounceTimer = Timer(const Duration(milliseconds: 250), () {
+      unawaited(_runViewportFetch(bounds));
+    });
   }
 
   void onQueryChanged(String value) {
@@ -96,6 +110,39 @@ class SearchProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> _runViewportFetch(LatLngBounds bounds) async {
+    final int viewportGeneration = ++_viewportGeneration;
+
+    final center = bounds.center;
+    final radiusMeters = _estimateRadius(bounds, center);
+
+    try {
+      final restaurants = await _service.searchRestaurantsInViewport(
+        center: center,
+        radiusMeters: radiusMeters,
+      );
+
+      if (viewportGeneration != _viewportGeneration) {
+        return;
+      }
+
+      final filtered = restaurants.where((restaurant) {
+        final coordinates = restaurant.coordinates;
+        return coordinates != null && bounds.contains(coordinates);
+      }).toList(growable: false);
+
+      _visibleRestaurants = filtered;
+      _sortVisibleRestaurantsByProximity();
+      notifyListeners();
+    } catch (_) {
+      if (viewportGeneration != _viewportGeneration) {
+        return;
+      }
+      _visibleRestaurants = const [];
+      notifyListeners();
+    }
+  }
+
   void _sortResultsByProximity() {
     final referencePoint = _referencePoint;
     if (referencePoint == null) {
@@ -128,6 +175,44 @@ class SearchProvider extends ChangeNotifier {
         final bDistance = _distance.as(LengthUnit.Meter, referencePoint, bCoords);
         return aDistance.compareTo(bDistance);
       });
+  }
+
+  void _sortVisibleRestaurantsByProximity() {
+    final referencePoint = _referencePoint ?? _viewportBounds?.center;
+    if (referencePoint == null) {
+      return;
+    }
+
+    _visibleRestaurants = [..._visibleRestaurants]
+      ..sort((a, b) {
+        final aCoords = a.coordinates;
+        final bCoords = b.coordinates;
+
+        if (aCoords == null && bCoords == null) {
+          return a.nombre.compareTo(b.nombre);
+        }
+        if (aCoords == null) {
+          return 1;
+        }
+        if (bCoords == null) {
+          return -1;
+        }
+
+        final aDistance = _distance.as(LengthUnit.Meter, referencePoint, aCoords);
+        final bDistance = _distance.as(LengthUnit.Meter, referencePoint, bCoords);
+        return aDistance.compareTo(bDistance);
+      });
+  }
+
+  double _estimateRadius(LatLngBounds bounds, LatLng center) {
+    final distances = <double>[
+      _distance.as(LengthUnit.Meter, center, bounds.northEast),
+      _distance.as(LengthUnit.Meter, center, bounds.northWest),
+      _distance.as(LengthUnit.Meter, center, bounds.southEast),
+      _distance.as(LengthUnit.Meter, center, bounds.southWest),
+    ];
+
+    return distances.reduce((a, b) => a > b ? a : b) + 250;
   }
 
   void selectLocation(SearchLocationResult location) {
@@ -175,6 +260,7 @@ class SearchProvider extends ChangeNotifier {
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _viewportDebounceTimer?.cancel();
     _service.dispose();
     super.dispose();
   }

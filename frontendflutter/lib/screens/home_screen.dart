@@ -32,13 +32,19 @@ class _HomeScreenState extends State<HomeScreen> {
           // Contenido central: mapa solo en la pestaña Mapa
           Expanded(
             child: _currentIndex == 1
-                ? Selector<SearchProvider, MapFocusRequest?>(
-                    selector: (_, provider) => provider.focusRequest,
-                    builder: (context, focusRequest, _) {
+                ? Selector<
+                    SearchProvider,
+                    ({MapFocusRequest? focusRequest, List<SearchRestaurantResult> visibleRestaurants})
+                  >(
+                    selector: (_, provider) => (
+                      focusRequest: provider.focusRequest,
+                      visibleRestaurants: provider.visibleRestaurants,
+                    ),
+                    builder: (context, mapState, _) {
                       return Stack(
                         children: [
                           AppMap(
-                            focusRequest: focusRequest,
+                            focusRequest: mapState.focusRequest,
                           ),
                           const Positioned(
                             left: 16,

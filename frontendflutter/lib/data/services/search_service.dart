@@ -116,6 +116,57 @@ class SearchService {
         .toList(growable: false);
   }
 
+  Future<List<SearchRestaurantResult>> searchRestaurantsInViewport({
+    required LatLng center,
+    required double radiusMeters,
+  }) async {
+    final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento/filtrar')
+        .replace(queryParameters: <String, String>{
+      'latitud': center.latitude.toString(),
+      'longitud': center.longitude.toString(),
+      'distancia_metros': radiusMeters.toStringAsFixed(0),
+    });
+
+    final response = await _client.get(
+      uri,
+      headers: const <String, String>{'Accept': 'application/json'},
+    );
+
+    if (response.statusCode != 200) {
+      return const [];
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! List) {
+      return const [];
+    }
+
+    return decoded
+        .whereType<Map<String, dynamic>>()
+        .map((entry) {
+          final id = entry['id_establecimiento'];
+          final nombre = entry['nombre']?.toString() ?? '';
+          final parsedId = id is int ? id : int.tryParse(id?.toString() ?? '');
+
+          if (parsedId == null || nombre.isEmpty) {
+            return null;
+          }
+
+          return SearchRestaurantResult(
+            idEstablecimiento: parsedId,
+            nombre: nombre,
+            direccionTexto: entry['direccion_texto']?.toString(),
+            latitud: double.tryParse(entry['latitud']?.toString() ?? ''),
+            longitud: double.tryParse(entry['longitud']?.toString() ?? ''),
+            estadoVerificado: entry['estado_verificado'] as bool?,
+            ultimaVerificacion: DateTime.tryParse(entry['ultima_verificacion']?.toString() ?? ''),
+            verificadorId: int.tryParse(entry['verificador_id']?.toString() ?? ''),
+          );
+        })
+        .whereType<SearchRestaurantResult>()
+        .toList(growable: false);
+  }
+
   void dispose() {
     _client.close();
   }

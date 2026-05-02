@@ -55,6 +55,18 @@ class _AppMapState extends State<AppMap> {
     });
   }
 
+  void _updateViewportBounds(LatLngBounds bounds) {
+    if (!mounted) {
+      return;
+    }
+
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _searchProvider?.updateViewportBounds(bounds);
+      }
+    });
+  }
+
   /// Intenta obtener la ubicación actual del dispositivo antes de pintar el mapa.
   /// Si no es posible, se queda centrado en Madrid, pero sin mostrar antes un salto visual.
   Future<void> _initializeMap() async {
@@ -208,6 +220,7 @@ class _AppMapState extends State<AppMap> {
           SchedulerBinding.instance.addPostFrameCallback((_) {
             if (_isMapReady && mounted) {
               mapController.move(_mapCenter, _currentZoom);
+              _updateViewportBounds(mapController.camera.visibleBounds);
             }
           });
         },
@@ -221,6 +234,7 @@ class _AppMapState extends State<AppMap> {
           _mapCenter = camera.center;
           _currentZoom = camera.zoom;
           _updateReferencePoint(camera.center);
+          _updateViewportBounds(camera.visibleBounds);
         },
       ),
       children: [
@@ -230,6 +244,27 @@ class _AppMapState extends State<AppMap> {
           userAgentPackageName: 'com.example.resto_espe',
           maxNativeZoom: 19,
           maxZoom: 19,
+        ),
+        MarkerLayer(
+          markers: _searchProvider?.visibleRestaurants
+                  .where((restaurant) => restaurant.coordinates != null)
+                  .map(
+                    (restaurant) => Marker(
+                      point: restaurant.coordinates!,
+                      width: 42,
+                      height: 42,
+                      child: GestureDetector(
+                        onTap: () => _showRestaurantPinPlaceholder(context, restaurant.nombre),
+                        child: const Icon(
+                          Icons.location_on_rounded,
+                          color: Color(AppColors.primaryOrange),
+                          size: 40,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(growable: false) ??
+              const [],
         ),
         // Punto azul de ubicación actual
         if (_currentLocation != null)
@@ -278,6 +313,17 @@ class _AppMapState extends State<AppMap> {
         ),
       ],
     );
+  }
+
+  void _showRestaurantPinPlaceholder(BuildContext context, String restaurantName) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('Seleccionado: $restaurantName'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
   }
 }
 
