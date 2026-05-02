@@ -30,3 +30,8 @@ Thumbs.db
 
 # Logs y temporales
 *.log
+
+# Autoskills / AI Agents
+.agents/
+skills-lock.json
+.github

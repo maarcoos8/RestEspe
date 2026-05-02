@@ -2,44 +2,11 @@ import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../widgets/google_sign_in_button.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+class LoginScreen extends StatelessWidget {
+  const LoginScreen({super.key});
 
-  @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends State<LoginScreen> {
-  bool _isLoading = false;
-
-  Future<void> _handleGoogleSignIn() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // TODO: Implementar login con Google
-      // Por ahora es solo un placeholder
-      await Future.delayed(const Duration(seconds: 2));
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Google Sign In - Coming Soon')),
-        );
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
+  void _handleGoogleSignIn(BuildContext context) {
+    Navigator.of(context).pushReplacementNamed(AppConstants.mapRoute);
   }
 
   @override
@@ -119,8 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
                 child: GoogleSignInButton(
-                  onPressed: _handleGoogleSignIn,
-                  isLoading: _isLoading,
+                  onPressed: () => _handleGoogleSignIn(context),
                 ),
               ),
             ],
