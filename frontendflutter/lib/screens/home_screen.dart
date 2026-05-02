@@ -4,6 +4,7 @@ import '../core/constants.dart';
 import '../widgets/app_header.dart';
 import '../widgets/app_bottom_nav_bar.dart';
 import '../widgets/app_map.dart';
+import '../widgets/app_search_bar.dart';
 
 /// Pantalla principal después del login.
 /// Contiene el header y la barra de navegación inferior.
@@ -28,7 +29,17 @@ class _HomeScreenState extends State<HomeScreen> {
           // Contenido central: mapa solo en la pestaña Mapa
           Expanded(
             child: _currentIndex == 1
-                ? const AppMap()
+                ? Stack(
+                    children: [
+                      const AppMap(),
+                      const Positioned(
+                        left: 16,
+                        right: 16,
+                        top: 16,
+                        child: AppSearchBar(),
+                      ),
+                    ],
+                  )
                 : Container(
                     color: const Color(AppColors.background),
                   ),
