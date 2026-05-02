@@ -2,13 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../core/constants.dart';
+import '../data/models/search_models.dart';
+import '../providers/search_provider.dart';
 
 /// Widget de mapa que muestra OpenStreetMap.
 /// Se centra en Madrid por defecto, pero intenta usar la ubicación del dispositivo si está disponible.
 class AppMap extends StatefulWidget {
-  const AppMap({super.key});
+  const AppMap({super.key, this.focusRequest});
+
+  final MapFocusRequest? focusRequest;
 
   @override
   State<AppMap> createState() => _AppMapState();
@@ -16,16 +22,37 @@ class AppMap extends StatefulWidget {
 
 class _AppMapState extends State<AppMap> {
   late MapController mapController;
+  SearchProvider? _searchProvider;
   LatLng? _currentLocation;
   LatLng _mapCenter = const LatLng(40.4168, -3.7038);
   double _currentZoom = 13.0;
   bool isLoadingLocation = true;
+  bool _isMapReady = false;
+  int _lastHandledFocusToken = -1;
 
   @override
   void initState() {
     super.initState();
     mapController = MapController();
     _initializeMap();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _searchProvider ??= context.read<SearchProvider>();
+  }
+
+  void _updateReferencePoint(LatLng point) {
+    if (!mounted) {
+      return;
+    }
+
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _searchProvider?.updateReferencePoint(point);
+      }
+    });
   }
 
   /// Intenta obtener la ubicación actual del dispositivo antes de pintar el mapa.
@@ -48,6 +75,7 @@ class _AppMapState extends State<AppMap> {
             _mapCenter = lastKnownLocation;
             isLoadingLocation = false;
           });
+          _updateReferencePoint(lastKnownLocation);
 
           return;
         }
@@ -74,6 +102,9 @@ class _AppMapState extends State<AppMap> {
             _mapCenter = currentLocation;
             isLoadingLocation = false;
           });
+          _updateReferencePoint(currentLocation);
+
+          _applyFocusRequest(widget.focusRequest);
         }
       } else {
         // Permiso denegado, mantener Madrid como ubicación por defecto
@@ -83,6 +114,7 @@ class _AppMapState extends State<AppMap> {
             _mapCenter = const LatLng(40.4168, -3.7038);
             isLoadingLocation = false;
           });
+          _updateReferencePoint(_mapCenter);
         }
       }
     } catch (e) {
@@ -94,16 +126,36 @@ class _AppMapState extends State<AppMap> {
           _mapCenter = const LatLng(40.4168, -3.7038);
           isLoadingLocation = false;
         });
+        _updateReferencePoint(_mapCenter);
       }
     }
+  }
+
+  @override
+  void didUpdateWidget(covariant AppMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.focusRequest?.token != oldWidget.focusRequest?.token) {
+      _applyFocusRequest(widget.focusRequest);
+    }
+  }
+
+  void _applyFocusRequest(MapFocusRequest? request) {
+    if (request == null || request.token == _lastHandledFocusToken) {
+      return;
+    }
+
+    _lastHandledFocusToken = request.token;
+    _moveMap(request.coordinates, request.zoom);
   }
 
   void _moveMap(LatLng center, double zoom) {
     _mapCenter = center;
     _currentZoom = zoom;
-    mapController.move(center, zoom);
-    if (mounted) {
-      setState(() {});
+    if (_isMapReady) {
+      mapController.move(center, zoom);
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
@@ -151,12 +203,24 @@ class _AppMapState extends State<AppMap> {
         initialZoom: 13.0,
         minZoom: 5.0,
         maxZoom: 18.0,
+        onMapReady: () {
+          _isMapReady = true;
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            if (_isMapReady && mounted) {
+              mapController.move(_mapCenter, _currentZoom);
+            }
+          });
+        },
         interactionOptions: const InteractionOptions(
-          flags: InteractiveFlag.all,
+          flags: InteractiveFlag.drag | InteractiveFlag.doubleTapZoom | InteractiveFlag.pinchZoom | InteractiveFlag.scrollWheelZoom,
         ),
         onPositionChanged: (camera, hasGesture) {
+          if (!mounted) {
+            return;
+          }
           _mapCenter = camera.center;
           _currentZoom = camera.zoom;
+          _updateReferencePoint(camera.center);
         },
       ),
       children: [

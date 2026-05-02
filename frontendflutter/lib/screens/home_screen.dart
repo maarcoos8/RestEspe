@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../core/constants.dart';
+import '../data/models/search_models.dart';
 import '../widgets/app_header.dart';
 import '../widgets/app_bottom_nav_bar.dart';
 import '../widgets/app_map.dart';
 import '../widgets/app_search_bar.dart';
+import '../providers/search_provider.dart';
 
 /// Pantalla principal después del login.
 /// Contiene el header y la barra de navegación inferior.
@@ -29,16 +32,23 @@ class _HomeScreenState extends State<HomeScreen> {
           // Contenido central: mapa solo en la pestaña Mapa
           Expanded(
             child: _currentIndex == 1
-                ? Stack(
-                    children: [
-                      const AppMap(),
-                      const Positioned(
-                        left: 16,
-                        right: 16,
-                        top: 16,
-                        child: AppSearchBar(),
-                      ),
-                    ],
+                ? Selector<SearchProvider, MapFocusRequest?>(
+                    selector: (_, provider) => provider.focusRequest,
+                    builder: (context, focusRequest, _) {
+                      return Stack(
+                        children: [
+                          AppMap(
+                            focusRequest: focusRequest,
+                          ),
+                          const Positioned(
+                            left: 16,
+                            right: 16,
+                            top: 16,
+                            child: AppSearchBar(),
+                          ),
+                        ],
+                      );
+                    },
                   )
                 : Container(
                     color: const Color(AppColors.background),

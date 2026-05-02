@@ -1,8 +1,8 @@
 /// Constantes de la aplicación RestEspe
 class AppConstants {
   // URLs de API
-  static const String apiBaseUrl = 'http://10.0.2.2:8000'; // Emulador Android
-  // static const String apiBaseUrl = 'http://localhost:8000'; // Navegador Web
+  static const String apiBaseUrl = 'http://10.0.2.2:8000/api/v1'; // Emulador Android
+  // static const String apiBaseUrl = 'http://localhost:8000/api/v1'; // Navegador Web
 
   // Strings
   static const String appName = 'RestEspe';
