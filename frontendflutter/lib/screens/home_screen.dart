@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../widgets/app_header.dart';
 import '../widgets/app_bottom_nav_bar.dart';
+import '../widgets/app_map.dart';
 
 /// Pantalla principal después del login.
 /// Contiene el header y la barra de navegación inferior.
@@ -24,11 +25,13 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           // Header reutilizable
           const AppHeader(),
-          // Contenido de la pantalla (vacío por ahora)
+          // Contenido central: mapa solo en la pestaña Mapa
           Expanded(
-            child: Container(
-              color: const Color(AppColors.background),
-            ),
+            child: _currentIndex == 1
+                ? const AppMap()
+                : Container(
+                    color: const Color(AppColors.background),
+                  ),
           ),
         ],
       ),
