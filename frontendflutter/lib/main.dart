@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:frontendflutter/providers/auth_provider.dart';
 import 'package:frontendflutter/core/constants.dart';
 import 'package:frontendflutter/core/theme.dart';
 import 'package:frontendflutter/screens/login_screen.dart';
@@ -15,8 +16,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => SearchProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => SearchProvider()),
+      ],
       child: MaterialApp(
         title: AppConstants.appName,
         theme: AppTheme.lightTheme,

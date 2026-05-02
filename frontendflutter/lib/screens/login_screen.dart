@@ -1,12 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import '../core/constants.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/google_sign_in_button.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
-  void _handleGoogleSignIn(BuildContext context) {
-    Navigator.of(context).pushReplacementNamed(AppConstants.mapRoute);
+  Future<void> _handleGoogleSignIn(BuildContext context) async {
+    final authProvider = context.read<AuthProvider>();
+
+    try {
+      final user = await authProvider.signInWithGoogle();
+      if (user == null || !context.mounted) {
+        return;
+      }
+
+      Navigator.of(context).pushReplacementNamed(AppConstants.mapRoute);
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'No se pudo iniciar sesión: $error',
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -83,11 +107,16 @@ class LoginScreen extends StatelessWidget {
               ),
 
               // Botón de login
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                child: GoogleSignInButton(
-                  onPressed: () => _handleGoogleSignIn(context),
-                ),
+              Consumer<AuthProvider>(
+                builder: (context, authProvider, child) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                    child: GoogleSignInButton(
+                      onPressed: () => _handleGoogleSignIn(context),
+                      isLoading: authProvider.isLoading,
+                    ),
+                  );
+                },
               ),
             ],
           ),

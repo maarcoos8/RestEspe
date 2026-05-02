@@ -11,6 +11,7 @@ from app.api.v1.endpoints import (
 	tipo_establecimiento as tipo_establecimiento_endpoint,
 	tipo_item_menu as tipo_item_menu_endpoint,
 	rol as rol_endpoint,
+	auth as auth_endpoint,
 	resena as resena_endpoint,
 	categoria_dieta as categoria_dieta_endpoint,
 	fotografia as fotografia_endpoint,
@@ -43,6 +44,8 @@ app.include_router(tipo_establecimiento_endpoint.router, prefix="/api/v1")
 app.include_router(tipo_item_menu_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de Fotografia
 app.include_router(fotografia_endpoint.router, prefix="/api/v1")
+# Registrar el endpoint de autenticación
+app.include_router(auth_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de Item Menu
 app.include_router(item_menu_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de relacion Item-Categoria

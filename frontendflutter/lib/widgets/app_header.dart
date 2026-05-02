@@ -9,6 +9,9 @@ class AppHeader extends StatelessWidget {
     super.key,
     this.title = AppConstants.appName,
     this.onProfilePressed,
+    this.userProfilePhoto,
+    this.showUserPhoto = true,
+    this.showProfileButton = true,
   });
 
   /// Título a mostrar en el header (por defecto "RestEspe")
@@ -16,6 +19,15 @@ class AppHeader extends StatelessWidget {
 
   /// Callback cuando se pulsa el botón de perfil
   final VoidCallback? onProfilePressed;
+
+  /// URL de la foto del perfil del usuario (opcional)
+  final String? userProfilePhoto;
+
+  /// Si es false, fuerza el icono por defecto aunque exista foto.
+  final bool showUserPhoto;
+
+  /// Si es false, oculta el botón del perfil en el header.
+  final bool showProfileButton;
 
   @override
   Widget build(BuildContext context) {
@@ -43,34 +55,51 @@ class AppHeader extends StatelessWidget {
                     ),
                   ),
                   // Botón de perfil a la derecha
-                  InkResponse(
-                    onTap: onProfilePressed,
-                    radius: 28,
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: const Color(AppColors.white),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(AppColors.primaryOrange),
-                          width: 3,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
+                  if (showProfileButton)
+                    InkResponse(
+                      onTap: onProfilePressed,
+                      radius: 28,
+                      child: Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: const Color(AppColors.white),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(AppColors.primaryOrange),
+                            width: 3,
                           ),
-                        ],
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: showUserPhoto && userProfilePhoto != null && userProfilePhoto!.isNotEmpty
+                            ? ClipOval(
+                                child: Image.network(
+                                  userProfilePhoto!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Icon(
+                                      Icons.person_outline_rounded,
+                                      color: Color(AppColors.darkText),
+                                      size: 28,
+                                    );
+                                  },
+                                ),
+                              )
+                            : const Icon(
+                                Icons.person_outline_rounded,
+                                color: Color(AppColors.darkText),
+                                size: 28,
+                              ),
                       ),
-                      child: const Icon(
-                        Icons.person_outline_rounded,
-                        color: Color(AppColors.darkText),
-                        size: 28,
-                      ),
-                    ),
-                  ),
+                    )
+                  else
+                    const SizedBox(width: 56, height: 56),
                 ],
               ),
             ),

@@ -73,53 +73,13 @@ class _AppMapState extends State<AppMap> {
     try {
       final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
 
-      // Si hay una última ubicación conocida, úsala primero para evitar el salto a Madrid.
-      final Position? lastKnownPosition = await Geolocator.getLastKnownPosition();
-      if (lastKnownPosition != null) {
-        final lastKnownLocation = LatLng(
-          lastKnownPosition.latitude,
-          lastKnownPosition.longitude,
-        );
-
-        if (mounted) {
-          setState(() {
-            _currentLocation = lastKnownLocation;
-            _mapCenter = lastKnownLocation;
-            isLoadingLocation = false;
-          });
-          _updateReferencePoint(lastKnownLocation);
-
-          return;
-        }
-      }
-
       // Verificar permisos
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
 
-      if (serviceEnabled &&
-          (permission == LocationPermission.whileInUse ||
-              permission == LocationPermission.always)) {
-        // Obtener posición actual
-        final Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-        ).timeout(const Duration(seconds: 5));
-
-        if (mounted) {
-          final currentLocation = LatLng(position.latitude, position.longitude);
-          setState(() {
-            _currentLocation = currentLocation;
-            _mapCenter = currentLocation;
-            isLoadingLocation = false;
-          });
-          _updateReferencePoint(currentLocation);
-
-          _applyFocusRequest(widget.focusRequest);
-        }
-      } else {
-        // Permiso denegado, mantener Madrid como ubicación por defecto
+      if (!serviceEnabled || permission == LocationPermission.deniedForever) {
         if (mounted) {
           setState(() {
             _currentLocation = null;
@@ -128,6 +88,57 @@ class _AppMapState extends State<AppMap> {
           });
           _updateReferencePoint(_mapCenter);
         }
+        return;
+      }
+
+      if (serviceEnabled &&
+          (permission == LocationPermission.whileInUse ||
+              permission == LocationPermission.always)) {
+        // Obtener posición actual
+        try {
+          final Position position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+          ).timeout(const Duration(seconds: 8));
+
+          if (mounted) {
+            final currentLocation = LatLng(position.latitude, position.longitude);
+            setState(() {
+              _currentLocation = currentLocation;
+              _mapCenter = currentLocation;
+              isLoadingLocation = false;
+            });
+            _updateReferencePoint(currentLocation);
+            _applyFocusRequest(widget.focusRequest);
+            return;
+          }
+        } catch (_) {
+          // Si no se consigue una posición inmediata, prueba con la última conocida.
+          final Position? lastKnownPosition = await Geolocator.getLastKnownPosition();
+          if (lastKnownPosition != null && mounted) {
+            final lastKnownLocation = LatLng(
+              lastKnownPosition.latitude,
+              lastKnownPosition.longitude,
+            );
+
+            setState(() {
+              _currentLocation = lastKnownLocation;
+              _mapCenter = lastKnownLocation;
+              isLoadingLocation = false;
+            });
+            _updateReferencePoint(lastKnownLocation);
+            return;
+          }
+        }
+      }
+
+      // Permiso denegado o sin posición disponible, mantener Madrid como ubicación por defecto
+      if (mounted) {
+        setState(() {
+          _currentLocation = null;
+          _mapCenter = const LatLng(40.4168, -3.7038);
+          isLoadingLocation = false;
+        });
+        _updateReferencePoint(_mapCenter);
       }
     } catch (e) {
       // Error al obtener ubicación, mantener Madrid como ubicación por defecto

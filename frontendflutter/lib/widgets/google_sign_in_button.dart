@@ -3,16 +3,18 @@ import '../core/constants.dart';
 
 class GoogleSignInButton extends StatelessWidget {
   final VoidCallback onPressed;
+  final bool isLoading;
 
   const GoogleSignInButton({
     super.key,
     required this.onPressed,
+    this.isLoading = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return OutlinedButton(
-      onPressed: onPressed,
+      onPressed: isLoading ? null : onPressed,
       style: OutlinedButton.styleFrom(
         side: const BorderSide(
           color: Color(AppColors.primaryOrange),
@@ -23,7 +25,16 @@ class GoogleSignInButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
         ),
       ),
-      child: Row(
+      child: isLoading
+          ? const SizedBox(
+              height: 24,
+              width: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: Color(AppColors.primaryOrange),
+              ),
+            )
+          : Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Image.asset(

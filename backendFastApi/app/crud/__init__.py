@@ -10,6 +10,7 @@ from . import crud_rol
 from . import crud_resena
 from . import crud_categoria
 from . import crud_fotografia
+from . import crud_usuario
 
 __all__ = [
 	"crud_establecimiento",
@@ -24,4 +25,5 @@ __all__ = [
 	"crud_resena",
 	"crud_categoria",
 	"crud_fotografia",
+	"crud_usuario",
 ]

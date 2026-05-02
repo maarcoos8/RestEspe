@@ -6,3 +6,5 @@ geoalchemy2
 alembic
 python-dotenv
 pydantic
+google-auth
+requests
