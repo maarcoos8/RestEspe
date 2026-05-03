@@ -54,9 +54,11 @@ class MapFocusRequest {
     required this.coordinates,
     required this.zoom,
     required this.token,
+    this.establishmentId,
   });
 
   final LatLng coordinates;
   final double zoom;
+  final int? establishmentId;
   final int token;
 }

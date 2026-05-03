@@ -35,92 +35,88 @@ class LoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-
     return Scaffold(
       backgroundColor: Color(AppColors.background),
-      body: SingleChildScrollView(
-        child: SizedBox(
-          height: screenHeight,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Espacio superior
-              SizedBox(height: screenHeight * 0.1),
-
-              // Contenido central
-              Column(
-                children: [
-                  // Logo
-                  Container(
-                    width: 140,
-                    height: 140,
-                    decoration: BoxDecoration(
-                      color: Color(AppColors.white),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+      body: Column(
+        children: [
+          // Contenido central expandible
+          Expanded(
+            child: Center(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Logo
+                    Container(
+                      width: 140,
+                      height: 140,
+                      decoration: BoxDecoration(
+                        color: Color(AppColors.white),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              Icons.restaurant,
+                              size: 80,
+                              color: Color(AppColors.primaryOrange),
+                            );
+                          },
                         ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Image.asset(
-                        'assets/images/logo.png',
-                        width: 100,
-                        height: 100,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.restaurant,
-                            size: 80,
-                            color: Color(AppColors.primaryOrange),
-                          );
-                        },
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 32),
+                    const SizedBox(height: 32),
 
-                  // Título
-                  Text(
-                    AppConstants.appName,
-                    style: Theme.of(context).textTheme.displayLarge,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Subtítulo
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Text(
-                      AppConstants.appTagline,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                            color: Color(AppColors.lightText),
-                            fontSize: 18,
-                          ),
+                    // Título
+                    Text(
+                      AppConstants.appName,
+                      style: Theme.of(context).textTheme.displayLarge,
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(height: 16),
 
-              // Botón de login
-              Consumer<AuthProvider>(
-                builder: (context, authProvider, child) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                    child: GoogleSignInButton(
-                      onPressed: () => _handleGoogleSignIn(context),
-                      isLoading: authProvider.isLoading,
+                    // Subtítulo
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(
+                        AppConstants.appTagline,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+                              color: Color(AppColors.lightText),
+                              fontSize: 18,
+                            ),
+                      ),
                     ),
-                  );
-                },
+                  ],
+                ),
               ),
-            ],
+            ),
           ),
-        ),
+
+          // Botón de login fijo al fondo
+          Consumer<AuthProvider>(
+            builder: (context, authProvider, child) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+                child: GoogleSignInButton(
+                  onPressed: () => _handleGoogleSignIn(context),
+                  isLoading: authProvider.isLoading,
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

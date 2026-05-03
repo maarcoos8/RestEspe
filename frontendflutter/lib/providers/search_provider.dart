@@ -234,6 +234,7 @@ class SearchProvider extends ChangeNotifier {
       coordinates: coordinates,
       zoom: 16,
       token: ++_focusToken,
+      establishmentId: restaurant.idEstablecimiento,
     );
     notifyListeners();
   }

@@ -33,7 +33,7 @@ class AppBottomNavBar extends StatelessWidget {
       _NavItem(
         icon: Icons.person_outline_rounded,
         activeIcon: Icons.person_rounded,
-        label: 'Profile',
+        label: 'Perfil',
       ),
     ];
 

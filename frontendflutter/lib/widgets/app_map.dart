@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -6,9 +7,11 @@ import 'package:provider/provider.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../core/constants.dart';
+import '../providers/auth_provider.dart';
 import '../data/models/search_models.dart';
 import '../data/services/restaurant_detail_service.dart';
 import '../providers/search_provider.dart';
+import '../providers/favorites_provider.dart';
 import 'restaurant_card_widget.dart';
 
 /// Widget de mapa que muestra OpenStreetMap.
@@ -26,6 +29,7 @@ class _AppMapState extends State<AppMap> {
   late MapController mapController;
   SearchProvider? _searchProvider;
   late RestaurantDetailService _restaurantService;
+  int? _syncedUserId;
   LatLng? _currentLocation;
   LatLng _mapCenter = const LatLng(40.4168, -3.7038);
   double _currentZoom = 13.0;
@@ -45,6 +49,11 @@ class _AppMapState extends State<AppMap> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _searchProvider ??= context.read<SearchProvider>();
+    final currentUserId = context.read<AuthProvider>().currentUser?.idUsuario;
+    if (_syncedUserId != currentUserId) {
+      _syncedUserId = currentUserId;
+      unawaited(context.read<FavoritesProvider>().syncUser(context.read<AuthProvider>().currentUser));
+    }
   }
 
   void _updateReferencePoint(LatLng point) {
@@ -177,6 +186,18 @@ class _AppMapState extends State<AppMap> {
     final double maxZoom = 18.0;
     final double adjustedZoom = (request.zoom - 2).clamp(minZoom, maxZoom).toDouble();
     _moveMap(request.coordinates, adjustedZoom);
+
+    // Si la solicitud incluye un establecimiento, mostrar sus detalles después de mover el mapa
+    if (request.establishmentId != null) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        // Pequeña espera para que la cámara termine de moverse visualmente
+        Future.delayed(const Duration(milliseconds: 250), () {
+          if (!mounted) return;
+          _showRestaurantDetails(context, request.establishmentId!);
+        });
+      });
+    }
   }
 
   void _moveMap(LatLng center, double zoom) {

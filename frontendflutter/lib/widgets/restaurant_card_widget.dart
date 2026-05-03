@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../core/constants.dart';
 import '../data/models/restaurant_detail_model.dart';
+import 'favorite_button.dart';
 
 /// Widget que muestra los detalles de un restaurante en una tarjeta.
 /// Se puede usar en diferentes contextos (sheet modal, vista, etc).
@@ -11,11 +12,13 @@ class RestaurantCardWidget extends StatefulWidget {
     super.key,
     required this.restaurant,
     this.currentLocation,
+    this.compact = false,
     this.onViewDetailsPressed,
   });
 
   final RestaurantDetail restaurant;
   final Position? currentLocation;
+  final bool compact;
   final VoidCallback? onViewDetailsPressed;
 
   @override
@@ -23,14 +26,6 @@ class RestaurantCardWidget extends StatefulWidget {
 }
 
 class _RestaurantCardWidgetState extends State<RestaurantCardWidget> {
-  late bool _isFavorite;
-
-  @override
-  void initState() {
-    super.initState();
-    _isFavorite = false;
-  }
-
   /// Calcula la distancia entre dos puntos (en km).
   double? _calculateDistance() {
     if (widget.currentLocation == null || widget.restaurant.coordinates == null) {
@@ -54,34 +49,27 @@ class _RestaurantCardWidgetState extends State<RestaurantCardWidget> {
   Widget build(BuildContext context) {
     final distance = _calculateDistance();
     final rating = widget.restaurant.puntuacionMedia;
+    final isCompact = widget.compact;
 
     return SingleChildScrollView(
       child: Container(
         decoration: const BoxDecoration(
           color: Color(AppColors.white),
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
+          border: Border.fromBorderSide(
+            BorderSide(
+              color: Color(0x1A000000),
+              width: 1,
+            ),
           ),
+          borderRadius: BorderRadius.all(Radius.circular(20)),
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, isCompact ? 12 : 32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Handle para cerrar (opcional)
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
+              SizedBox(height: isCompact ? 4 : 8),
 
               // Nombre y botón favorito
               Row(
@@ -91,7 +79,10 @@ class _RestaurantCardWidgetState extends State<RestaurantCardWidget> {
                   Expanded(
                     child: Text(
                       widget.restaurant.nombre,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      style: (isCompact
+                              ? Theme.of(context).textTheme.titleLarge
+                              : Theme.of(context).textTheme.headlineSmall)
+                          ?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                       maxLines: 2,
@@ -99,26 +90,18 @@ class _RestaurantCardWidgetState extends State<RestaurantCardWidget> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _isFavorite = !_isFavorite;
-                      });
-                    },
-                    child: Icon(
-                      _isFavorite ? Icons.favorite : Icons.favorite_border,
-                      color: const Color(AppColors.primaryOrange),
-                      size: 28,
-                    ),
+                  FavoriteButton(
+                    establishmentId: widget.restaurant.idEstablecimiento,
+                    size: isCompact ? 24 : 28,
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: isCompact ? 6 : 8),
 
               // Tipos de establecimiento
               if (widget.restaurant.tiposEstablecimiento.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                  padding: EdgeInsets.only(bottom: isCompact ? 8 : 12),
                   child: Text(
                     widget.restaurant.tiposEstablecimiento
                         .map((tipo) => tipo.nombreCategoria)
@@ -134,7 +117,8 @@ class _RestaurantCardWidgetState extends State<RestaurantCardWidget> {
               // Categorías de dieta con fondo y color
               if (widget.restaurant.categoriasDieta.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                  // Quitar padding inferior extra para que quede simétrico con el separador
+                  padding: EdgeInsets.only(bottom: isCompact ? 0 : 0),
                   child: Wrap(
                     spacing: 8,
                     runSpacing: 6,
@@ -162,18 +146,22 @@ class _RestaurantCardWidgetState extends State<RestaurantCardWidget> {
                   ),
                 ),
 
-              const SizedBox(height: 12),
-              const Divider(height: 1),
-              const SizedBox(height: 12),
+              SizedBox(height: isCompact ? 8 : 10),
+              const Divider(
+                height: 1,
+                thickness: 1,
+                color: Color(0x1F000000),
+              ),
+              SizedBox(height: isCompact ? 8 : 10),
 
               // Distancia y puntuación en fila
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Distancia
-                  if (distance != null)
-                    Row(
-                      children: [
+                  // Distancia y estado de verificación
+                  Row(
+                    children: [
+                      if (distance != null) ...[
                         const Icon(
                           Icons.location_on_outlined,
                           size: 18,
@@ -188,8 +176,32 @@ class _RestaurantCardWidgetState extends State<RestaurantCardWidget> {
                                 color: Colors.grey[600],
                               ),
                         ),
+                        const SizedBox(width: 10),
                       ],
-                    ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _verificationBackgroundColor(widget.restaurant.estadoVerificado),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: _verificationForegroundColor(widget.restaurant.estadoVerificado)
+                                .withValues(alpha: 0.35),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          widget.restaurant.estadoVerificado == true ? 'Verificado' : 'No verificado',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: _verificationForegroundColor(widget.restaurant.estadoVerificado),
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
 
                   // Puntuación
                   if (rating != null)
@@ -222,31 +234,32 @@ class _RestaurantCardWidgetState extends State<RestaurantCardWidget> {
                 ],
               ),
 
-              const SizedBox(height: 16),
+              SizedBox(height: isCompact ? 8 : 16),
 
               // Botón "Ver detalles"
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(AppColors.primaryOrange),
-                    foregroundColor: const Color(AppColors.white),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              if (widget.onViewDetailsPressed != null)
+                SizedBox(
+                  width: double.infinity,
+                  height: isCompact ? 44 : 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(AppColors.primaryOrange),
+                      foregroundColor: const Color(AppColors.white),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
                     ),
-                    elevation: 2,
-                  ),
-                  onPressed: widget.onViewDetailsPressed,
-                  child: Text(
-                    'Ver detalles',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: const Color(AppColors.white),
-                          fontWeight: FontWeight.w600,
-                        ),
+                    onPressed: widget.onViewDetailsPressed,
+                    child: Text(
+                      'Ver detalles',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: const Color(AppColors.white),
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
@@ -272,6 +285,14 @@ class _RestaurantCardWidgetState extends State<RestaurantCardWidget> {
       return Colors.amber.shade50;
     }
     return Colors.red.shade50;
+  }
+
+  Color _verificationForegroundColor(bool? verified) {
+    return verified == true ? Colors.green.shade800 : Colors.red.shade800;
+  }
+
+  Color _verificationBackgroundColor(bool? verified) {
+    return verified == true ? Colors.green.shade50 : Colors.red.shade50;
   }
 }
 

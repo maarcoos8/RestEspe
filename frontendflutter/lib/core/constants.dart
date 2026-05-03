@@ -10,7 +10,7 @@ class AppConstants {
 
   // Strings
   static const String appName = 'RestEspe';
-  static const String appTagline = 'Savor the best, delivered to your doorstep.';
+  static const String appTagline = 'Tu dieta, tu mapa.';
 
   // Rutas
   static const String loginRoute = '/login';
