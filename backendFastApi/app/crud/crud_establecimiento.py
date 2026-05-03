@@ -50,13 +50,19 @@ def get_establecimientos(db: Session, skip: int = 0, limit: int = 100) -> List[E
     return db.query(Establecimiento).offset(skip).limit(limit).all()
 
 
-def get_puntuacion_media_establecimiento(db: Session, id_establecimiento: int) -> Optional[float]:
-    puntuacion_media = (
-        db.query(func.avg(Resena.puntuacion))
+def get_puntuacion_media_establecimiento(db: Session, id_establecimiento: int) -> dict:
+    puntuacion_media, numero_resenas = (
+        db.query(
+            func.avg(Resena.puntuacion),
+            func.count(Resena.id_resena),
+        )
         .filter(Resena.id_establecimiento == id_establecimiento)
-        .scalar()
+        .one()
     )
-    return float(puntuacion_media) if puntuacion_media is not None else None
+    return {
+        "puntuacion_media": float(puntuacion_media) if puntuacion_media is not None else None,
+        "numero_resenas": int(numero_resenas or 0),
+    }
 
 
 def get_establecimientos_filtrados(

@@ -21,5 +21,6 @@ class EstablecimientoFiltroOut(BaseModel):
 class PuntuacionMediaOut(BaseModel):
     id_establecimiento: int
     puntuacion_media: Optional[float] = None
+    numero_resenas: int = 0
 
     model_config = ConfigDict(from_attributes=True)

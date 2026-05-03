@@ -7,7 +7,9 @@ import 'package:flutter/scheduler.dart';
 
 import '../core/constants.dart';
 import '../data/models/search_models.dart';
+import '../data/services/restaurant_detail_service.dart';
 import '../providers/search_provider.dart';
+import 'restaurant_card_widget.dart';
 
 /// Widget de mapa que muestra OpenStreetMap.
 /// Se centra en Madrid por defecto, pero intenta usar la ubicación del dispositivo si está disponible.
@@ -23,6 +25,7 @@ class AppMap extends StatefulWidget {
 class _AppMapState extends State<AppMap> {
   late MapController mapController;
   SearchProvider? _searchProvider;
+  late RestaurantDetailService _restaurantService;
   LatLng? _currentLocation;
   LatLng _mapCenter = const LatLng(40.4168, -3.7038);
   double _currentZoom = 13.0;
@@ -34,6 +37,7 @@ class _AppMapState extends State<AppMap> {
   void initState() {
     super.initState();
     mapController = MapController();
+    _restaurantService = RestaurantDetailService();
     _initializeMap();
   }
 
@@ -273,7 +277,7 @@ class _AppMapState extends State<AppMap> {
                       child: Transform.translate(
                         offset: const Offset(0, 6), // bajar el icono 6px para compensar margen
                         child: GestureDetector(
-                          onTap: () => _showRestaurantPinPlaceholder(context, restaurant.nombre),
+                          onTap: () => _showRestaurantDetails(context, restaurant.idEstablecimiento),
                           child: const Icon(
                             Icons.location_on_rounded,
                             color: Color(AppColors.primaryOrange),
@@ -335,15 +339,68 @@ class _AppMapState extends State<AppMap> {
     );
   }
 
-  void _showRestaurantPinPlaceholder(BuildContext context, String restaurantName) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('Seleccionado: $restaurantName'),
-          duration: const Duration(seconds: 1),
-        ),
-      );
+  /// Carga los detalles del restaurante y muestra un bottom sheet.
+  Future<void> _showRestaurantDetails(BuildContext context, int idEstablecimiento) async {
+    // Mostrar un loading indicator mientras se cargan los datos
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => FutureBuilder(
+        future: _restaurantService.getRestaurantDetail(idEstablecimiento),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Container(
+              height: 200,
+              alignment: Alignment.center,
+              child: const CircularProgressIndicator(
+                color: Color(AppColors.primaryOrange),
+              ),
+            );
+          }
+
+          if (snapshot.hasError || snapshot.data == null) {
+            return Container(
+              height: 200,
+              alignment: Alignment.center,
+              child: Text(
+                'Error al cargar los detalles',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            );
+          }
+
+          final restaurant = snapshot.data!;
+          return RestaurantCardWidget(
+            restaurant: restaurant,
+            currentLocation: _currentLocation != null
+                ? Position(
+                    latitude: _currentLocation!.latitude,
+                    longitude: _currentLocation!.longitude,
+                    timestamp: DateTime.now(),
+                    accuracy: 0,
+                    altitude: 0,
+                    altitudeAccuracy: 0,
+                    heading: 0,
+                    headingAccuracy: 0,
+                    speed: 0,
+                    speedAccuracy: 0,
+                  )
+                : null,
+            onViewDetailsPressed: () {
+              // TODO: Navegar a la vista de detalles del establecimiento
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  SnackBar(
+                    content: Text('Ver detalles: ${restaurant.nombre}'),
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+            },
+          );
+        },
+      ),
+    );
   }
 }
 

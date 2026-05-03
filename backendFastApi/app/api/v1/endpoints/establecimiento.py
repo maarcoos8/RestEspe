@@ -109,8 +109,8 @@ def puntuacion_media_establecimiento(id: int, db: Session = Depends(get_db)):
     if not obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Establecimiento no encontrado")
 
-    puntuacion_media = crud.crud_establecimiento.get_puntuacion_media_establecimiento(db, id)
-    return {"id_establecimiento": id, "puntuacion_media": puntuacion_media}
+    puntuacion = crud.crud_establecimiento.get_puntuacion_media_establecimiento(db, id)
+    return {"id_establecimiento": id, **puntuacion}
 
 
 @router.post("/", response_model=EstablecimientoOut, status_code=status.HTTP_201_CREATED)
