@@ -7,6 +7,7 @@ from datetime import datetime
 class EstablecimientoBase(BaseModel):
 	nombre: str
 	direccion_texto: Optional[str] = None
+	imagen_url: Optional[str] = None
 	latitud: Optional[float] = None
 	longitud: Optional[float] = None
 	estado_verificado: Optional[bool] = False
@@ -21,6 +22,7 @@ class EstablecimientoCreate(EstablecimientoBase):
 class EstablecimientoUpdate(BaseModel):
 	nombre: Optional[str] = None
 	direccion_texto: Optional[str] = None
+	imagen_url: Optional[str] = None
 	latitud: Optional[float] = None
 	longitud: Optional[float] = None
 	estado_verificado: Optional[bool] = None

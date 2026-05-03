@@ -11,6 +11,7 @@ class Establecimiento(Base):
 	id_establecimiento = Column(Integer, primary_key=True, index=True)
 	nombre = Column(String(255), nullable=False)
 	direccion_texto = Column(String(512), nullable=True)
+	imagen_url = Column(String(1024), nullable=True)
 	coordenadas = Column(Geometry(geometry_type="POINT", srid=4326), nullable=True)
 	estado_verificado = Column(Boolean, default=False, nullable=False)
 	ultima_verificacion = Column(DateTime(timezone=True), nullable=True)
