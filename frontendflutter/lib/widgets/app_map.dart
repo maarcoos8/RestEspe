@@ -168,7 +168,11 @@ class _AppMapState extends State<AppMap> {
     }
 
     _lastHandledFocusToken = request.token;
-    _moveMap(request.coordinates, request.zoom);
+    // Aplicar el focus con 2 niveles de zoom menos, asegurando límites
+    final double minZoom = 5.0;
+    final double maxZoom = 18.0;
+    final double adjustedZoom = (request.zoom - 2).clamp(minZoom, maxZoom).toDouble();
+    _moveMap(request.coordinates, adjustedZoom);
   }
 
   void _moveMap(LatLng center, double zoom) {
@@ -264,12 +268,17 @@ class _AppMapState extends State<AppMap> {
                       point: restaurant.coordinates!,
                       width: 42,
                       height: 42,
-                      child: GestureDetector(
-                        onTap: () => _showRestaurantPinPlaceholder(context, restaurant.nombre),
-                        child: const Icon(
-                          Icons.location_on_rounded,
-                          color: Color(AppColors.primaryOrange),
-                          size: 40,
+                      // Ajuste de alineación: usar topCenter para corregir la orientación
+                      alignment: Alignment.topCenter,
+                      child: Transform.translate(
+                        offset: const Offset(0, 6), // bajar el icono 6px para compensar margen
+                        child: GestureDetector(
+                          onTap: () => _showRestaurantPinPlaceholder(context, restaurant.nombre),
+                          child: const Icon(
+                            Icons.location_on_rounded,
+                            color: Color(AppColors.primaryOrange),
+                            size: 40,
+                          ),
                         ),
                       ),
                     ),
