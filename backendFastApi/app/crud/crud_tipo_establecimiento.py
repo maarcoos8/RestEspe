@@ -1,5 +1,6 @@
 from typing import List, Optional
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.tipo_establecimiento import TipoEstablecimiento
@@ -16,10 +17,18 @@ def get_tipos_establecimiento(db: Session) -> List[TipoEstablecimiento]:
 
 def create_tipo_establecimiento(db: Session, tipo_in: TipoEstablecimientoCreate) -> TipoEstablecimiento:
     data = tipo_in.model_dump(exclude_unset=True)
+    existing = db.query(TipoEstablecimiento).filter(TipoEstablecimiento.nombre_categoria == data["nombre_categoria"]).first()
+    if existing:
+        raise ValueError("Ya existe un tipo de establecimiento con ese nombre")
+
     db_obj = TipoEstablecimiento(**data)
     db.add(db_obj)
-    db.commit()
-    db.refresh(db_obj)
+    try:
+        db.commit()
+        db.refresh(db_obj)
+    except IntegrityError:
+        db.rollback()
+        raise ValueError("Ya existe un tipo de establecimiento con ese nombre")
     return db_obj
 
 
@@ -27,12 +36,28 @@ def update_tipo_establecimiento(
     db: Session, db_obj: TipoEstablecimiento, tipo_in: TipoEstablecimientoUpdate
 ) -> TipoEstablecimiento:
     data = tipo_in.model_dump(exclude_unset=True)
+    if "nombre_categoria" in data:
+        existing = (
+            db.query(TipoEstablecimiento)
+            .filter(
+                TipoEstablecimiento.nombre_categoria == data["nombre_categoria"],
+                TipoEstablecimiento.id_tipo_establecimiento != db_obj.id_tipo_establecimiento,
+            )
+            .first()
+        )
+        if existing:
+            raise ValueError("Ya existe un tipo de establecimiento con ese nombre")
+
     for field, value in data.items():
         setattr(db_obj, field, value)
 
     db.add(db_obj)
-    db.commit()
-    db.refresh(db_obj)
+    try:
+        db.commit()
+        db.refresh(db_obj)
+    except IntegrityError:
+        db.rollback()
+        raise ValueError("Ya existe un tipo de establecimiento con ese nombre")
     return db_obj
 
 

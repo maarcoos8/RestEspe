@@ -1,11 +1,79 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../models/admin_user_model.dart';
 import '../models/categoria_dieta_model.dart';
+import '../models/rol_model.dart';
 import '../models/tipo_establecimiento_model.dart';
 import '../../core/constants.dart';
 
 /// Servicio para obtener datos de administración de la aplicación.
 class AdminService {
+  static String _extractErrorMessage(http.Response response, String fallback) {
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic> && decoded['detail'] != null) {
+        return decoded['detail'].toString();
+      }
+    } catch (_) {
+      // Ignore parse errors and fall back to the provided message.
+    }
+    return fallback;
+  }
+
+  /// Obtiene la lista de usuarios.
+  static Future<List<AdminUserModel>> getUsuarios() async {
+    try {
+      final uri = Uri.parse('${AppConstants.apiBaseUrl}/usuario/');
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
+        return jsonList.map((json) => AdminUserModel.fromJson(json as Map<String, dynamic>)).toList();
+      }
+      throw Exception('Error al obtener usuarios: ${response.statusCode}');
+    } catch (e) {
+      throw Exception('Error al obtener usuarios: $e');
+    }
+  }
+
+  /// Obtiene la lista de roles.
+  static Future<List<RolModel>> getRoles() async {
+    try {
+      final uri = Uri.parse('${AppConstants.apiBaseUrl}/rol/');
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
+        return jsonList.map((json) => RolModel.fromJson(json as Map<String, dynamic>)).toList();
+      }
+      throw Exception('Error al obtener roles: ${response.statusCode}');
+    } catch (e) {
+      throw Exception('Error al obtener roles: $e');
+    }
+  }
+
+  /// Actualiza el rol de un usuario.
+  static Future<void> updateUsuarioRol(int idUsuario, int idRol) async {
+    final uri = Uri.parse('${AppConstants.apiBaseUrl}/usuario/$idUsuario');
+    final response = await http.put(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'id_rol': idRol}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Error al actualizar usuario: $idUsuario (status: ${response.statusCode})');
+    }
+  }
+
+  /// Elimina un usuario.
+  static Future<void> deleteUsuario(int idUsuario) async {
+    final uri = Uri.parse('${AppConstants.apiBaseUrl}/usuario/$idUsuario');
+    final response = await http.delete(uri);
+    if (response.statusCode != 200) {
+      throw Exception('Error al eliminar usuario: $idUsuario (status: ${response.statusCode})');
+    }
+  }
+
   /// Obtiene la lista de categorías de dieta.
   static Future<List<CategoriaDieta>> getCategoriasDieta() async {
     try {
@@ -49,7 +117,7 @@ class AdminService {
       body: jsonEncode({'nombre_dieta': nombreDieta}),
     );
     if (response.statusCode != 201) {
-      throw Exception('Error al crear categoría de dieta: ${response.statusCode}');
+      throw Exception(_extractErrorMessage(response, 'Error al crear categoría de dieta'));
     }
   }
 
@@ -71,7 +139,7 @@ class AdminService {
       body: jsonEncode({'nombre_dieta': nombreDieta}),
     );
     if (response.statusCode != 200) {
-      throw Exception('Error al actualizar categoría de dieta: $id (status: ${response.statusCode})');
+      throw Exception(_extractErrorMessage(response, 'Error al actualizar categoría de dieta'));
     }
   }
 
@@ -84,7 +152,7 @@ class AdminService {
       body: jsonEncode({'nombre_categoria': nombreCategoria}),
     );
     if (response.statusCode != 201) {
-      throw Exception('Error al crear tipo de establecimiento: ${response.statusCode}');
+      throw Exception(_extractErrorMessage(response, 'Error al crear tipo de establecimiento'));
     }
   }
 
@@ -106,7 +174,7 @@ class AdminService {
       body: jsonEncode({'nombre_categoria': nombreCategoria}),
     );
     if (response.statusCode != 200) {
-      throw Exception('Error al actualizar tipo de establecimiento: $id (status: ${response.statusCode})');
+      throw Exception(_extractErrorMessage(response, 'Error al actualizar tipo de establecimiento'));
     }
   }
 }

@@ -29,7 +29,10 @@ def leer_categoria(id: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=CategoriaDietaOut, status_code=status.HTTP_201_CREATED)
 def crear_categoria(cat_in: CategoriaDietaCreate, db: Session = Depends(get_db)):
-    return crud.crud_categoria.create_categoria(db, cat_in)
+    try:
+        return crud.crud_categoria.create_categoria(db, cat_in)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
 
 @router.put("/{id}", response_model=CategoriaDietaOut)
@@ -37,7 +40,10 @@ def actualizar_categoria(id: int, cat_in: CategoriaDietaUpdate, db: Session = De
     db_obj = crud.crud_categoria.get_categoria(db, id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Categoria no encontrada")
-    return crud.crud_categoria.update_categoria(db, db_obj, cat_in)
+    try:
+        return crud.crud_categoria.update_categoria(db, db_obj, cat_in)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
 
 @router.delete("/{id}", response_model=CategoriaDietaOut)

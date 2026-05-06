@@ -24,6 +24,27 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
   // Track which expansion sections are open to style the title row
   final Set<String> _expandedSections = {};
 
+  void _showErrorSnackBar(String message) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(AppColors.errorRed),
+      ),
+    );
+  }
+
+  String _formatApiError(Object error, String fallbackPrefix) {
+    final message = error.toString().replaceFirst(RegExp(r'^Exception:\s*'), '');
+    if (message.contains('Ya existe')) {
+      return message;
+    }
+    return '$fallbackPrefix: $message';
+  }
+
   @override
   Widget build(BuildContext context) {
     return ScaffoldWithNav(
@@ -60,8 +81,20 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                             return;
                           }
 
-                          await AdminService.createCategoriaDieta(newValue);
-                          await _loadCategoriasDieta();
+                          try {
+                            await AdminService.createCategoriaDieta(newValue);
+                            await _loadCategoriasDieta();
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('"$newValue" ha sido creado'),
+                                  backgroundColor: const Color(AppColors.successGreen),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            _showErrorSnackBar(_formatApiError(e, 'Error al crear dieta'));
+                          }
                         },
                       ),
                       ..._categoriasDieta!.asMap().entries.map((entry) {
@@ -81,16 +114,20 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                               return;
                             }
 
-                            await AdminService.updateCategoriaDieta(dieta.idCategoria, newValue);
-                            setState(() {
-                              final index = _categoriasDieta!.indexWhere((d) => d.idCategoria == dieta.idCategoria);
-                              if (index != -1) {
-                                _categoriasDieta![index] = CategoriaDieta(
-                                  idCategoria: dieta.idCategoria,
-                                  nombreDieta: newValue,
-                                );
-                              }
-                            });
+                            try {
+                              await AdminService.updateCategoriaDieta(dieta.idCategoria, newValue);
+                              setState(() {
+                                final index = _categoriasDieta!.indexWhere((d) => d.idCategoria == dieta.idCategoria);
+                                if (index != -1) {
+                                  _categoriasDieta![index] = CategoriaDieta(
+                                    idCategoria: dieta.idCategoria,
+                                    nombreDieta: newValue,
+                                  );
+                                }
+                              });
+                            } catch (e) {
+                              _showErrorSnackBar(_formatApiError(e, 'Error al actualizar dieta'));
+                            }
                           },
                           onDelete: () async {
                             await AdminService.deleteCategoriaDieta(dieta.idCategoria);
@@ -115,8 +152,20 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                             return;
                           }
 
-                          await AdminService.createCategoriaDieta(newValue);
-                          await _loadCategoriasDieta();
+                          try {
+                            await AdminService.createCategoriaDieta(newValue);
+                            await _loadCategoriasDieta();
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('"$newValue" ha sido creado'),
+                                  backgroundColor: const Color(AppColors.successGreen),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            _showErrorSnackBar(_formatApiError(e, 'Error al crear dieta'));
+                          }
                         },
                       ),
                     ],
@@ -148,8 +197,20 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                             return;
                           }
 
-                          await AdminService.createTipoEstablecimiento(newValue);
-                          await _loadTiposEstablecimiento();
+                          try {
+                            await AdminService.createTipoEstablecimiento(newValue);
+                            await _loadTiposEstablecimiento();
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('"$newValue" ha sido creado'),
+                                  backgroundColor: const Color(AppColors.successGreen),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            _showErrorSnackBar(_formatApiError(e, 'Error al crear tipo de establecimiento'));
+                          }
                         },
                       ),
                       ..._tiposEstablecimiento!.asMap().entries.map((entry) {
@@ -169,16 +230,20 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                               return;
                             }
 
-                            await AdminService.updateTipoEstablecimiento(tipo.idTipoEstablecimiento, newValue);
-                            setState(() {
-                              final index = _tiposEstablecimiento!.indexWhere((t) => t.idTipoEstablecimiento == tipo.idTipoEstablecimiento);
-                              if (index != -1) {
-                                _tiposEstablecimiento![index] = TipoEstablecimiento(
-                                  idTipoEstablecimiento: tipo.idTipoEstablecimiento,
-                                  nombreCategoria: newValue,
-                                );
-                              }
-                            });
+                            try {
+                              await AdminService.updateTipoEstablecimiento(tipo.idTipoEstablecimiento, newValue);
+                              setState(() {
+                                final index = _tiposEstablecimiento!.indexWhere((t) => t.idTipoEstablecimiento == tipo.idTipoEstablecimiento);
+                                if (index != -1) {
+                                  _tiposEstablecimiento![index] = TipoEstablecimiento(
+                                    idTipoEstablecimiento: tipo.idTipoEstablecimiento,
+                                    nombreCategoria: newValue,
+                                  );
+                                }
+                              });
+                            } catch (e) {
+                              _showErrorSnackBar(_formatApiError(e, 'Error al actualizar tipo de establecimiento'));
+                            }
                           },
                           onDelete: () async {
                             await AdminService.deleteTipoEstablecimiento(tipo.idTipoEstablecimiento);
@@ -203,8 +268,20 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                             return;
                           }
 
-                          await AdminService.createTipoEstablecimiento(newValue);
-                          await _loadTiposEstablecimiento();
+                          try {
+                            await AdminService.createTipoEstablecimiento(newValue);
+                            await _loadTiposEstablecimiento();
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('"$newValue" ha sido creado'),
+                                  backgroundColor: const Color(AppColors.successGreen),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            _showErrorSnackBar(_formatApiError(e, 'Error al crear tipo de establecimiento'));
+                          }
                         },
                       ),
                     ],
@@ -480,33 +557,72 @@ class _AdminItemTile extends StatelessWidget {
             ),
           if (onDelete != null)
             IconButton(
-              icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+              icon: const Icon(Icons.delete_outline_rounded, color: Color(AppColors.errorRed)),
               tooltip: 'Eliminar',
               onPressed: () async {
-                final confirmed = await showDialog<bool>(
+                await showDialog(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    title: const Text('Confirmar eliminación'),
+                    backgroundColor: const Color(AppColors.white),
+                    title: Text(
+                      'Eliminar Elemento',
+                      style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
+                            color: const Color(AppColors.darkText),
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
                     content: Text(
-                      '¿Estás seguro de que quieres eliminar "$title"?',
+                      '¿Estás seguro de que quieres eliminar "$title"? Esta acción no se puede deshacer.',
                       style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
                             color: const Color(AppColors.darkText),
                           ),
                     ),
                     actions: [
-                      TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
-                      TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Eliminar', style: TextStyle(color: Colors.red))),
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: Text(
+                          'Cancelar',
+                          style: Theme.of(ctx).textTheme.labelLarge?.copyWith(
+                                color: const Color(AppColors.lightText),
+                              ),
+                        ),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(AppColors.errorRed),
+                        ),
+                        onPressed: () async {
+                          try {
+                            await onDelete!();
+                            Navigator.of(ctx).pop();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('"$title" ha sido eliminado'),
+                                  backgroundColor: const Color(AppColors.successGreen),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            Navigator.of(ctx).pop();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error al eliminar: $e'),
+                                  backgroundColor: const Color(AppColors.errorRed),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        child: const Text(
+                          'Eliminar',
+                          style: TextStyle(color: Color(AppColors.white)),
+                        ),
+                      ),
                     ],
                   ),
                 );
-
-                if (confirmed == true) {
-                  try {
-                    await onDelete!();
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al eliminar')));
-                  }
-                }
               },
             ),
         ],

@@ -11,6 +11,7 @@ from app.api.v1.endpoints import (
 	tipo_establecimiento as tipo_establecimiento_endpoint,
 	tipo_item_menu as tipo_item_menu_endpoint,
 	rol as rol_endpoint,
+	usuario as usuario_endpoint,
 	auth as auth_endpoint,
 	resena as resena_endpoint,
 	categoria_dieta as categoria_dieta_endpoint,
@@ -28,6 +29,8 @@ app = FastAPI()
 app.include_router(establecimiento.router, prefix="/api/v1")
 # Registrar el endpoint de Rol
 app.include_router(rol_endpoint.router, prefix="/api/v1")
+# Registrar el endpoint de Usuario
+app.include_router(usuario_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de Reseñas
 app.include_router(resena_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de Categoria Dieta
