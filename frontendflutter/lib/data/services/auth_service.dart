@@ -18,6 +18,16 @@ class AuthService {
   final GoogleSignIn _googleSignIn;
 
   Future<GoogleUserProfile?> signInWithGoogle() async {
+    try {
+      return await _signInAndAuthenticateWithGoogle();
+    } catch (_) {
+      // Un único reintento cubre fallos transitorios del primer login.
+      await Future.delayed(const Duration(milliseconds: 500));
+      return await _signInAndAuthenticateWithGoogle();
+    }
+  }
+
+  Future<GoogleUserProfile?> _signInAndAuthenticateWithGoogle() async {
     final account = await _googleSignIn.signIn().timeout(
           const Duration(seconds: 30),
           onTimeout: () {
