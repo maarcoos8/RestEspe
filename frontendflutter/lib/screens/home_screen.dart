@@ -10,18 +10,21 @@ import '../widgets/app_map.dart';
 import '../widgets/app_search_bar.dart';
 import '../providers/search_provider.dart';
 import 'profile_screen.dart';
+import 'admin_screen.dart';
 
 /// Pantalla principal después del login.
 /// Contiene el header y la barra de navegación inferior.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.initialIndex = 1});
+
+  final int initialIndex;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 1; // Índice inicial: Mapa
+  late int _currentIndex = widget.initialIndex; // Índice inicial: Mapa
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +36,11 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               // Header reutilizable con foto del usuario
               AppHeader(
+                onTitlePressed: () {
+                  setState(() {
+                    _currentIndex = 1; // Mismo comportamiento que pulsar "Mapa"
+                  });
+                },
                 userProfilePhoto: authProvider.currentUser?.fotoPerfil,
                 showUserPhoto: _currentIndex != 2,
                 showProfileButton: _currentIndex != 2,
@@ -51,6 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
           // Barra de navegación inferior
           bottomNavigationBar: AppBottomNavBar(
             currentIndex: _currentIndex,
+            userRoleId: authProvider.currentUser?.idRol,
             onTap: (index) {
               setState(() {
                 _currentIndex = index;
@@ -104,6 +113,9 @@ class _HomeScreenState extends State<HomeScreen> {
       case 2:
         // Índice 2: Perfil
         return const ProfileScreen();
+      case 3:
+        // Índice 3: Administración (solo para roles != usuario)
+        return const AdminScreen();
       default:
         return Container(color: const Color(AppColors.background));
     }

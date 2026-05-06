@@ -57,148 +57,148 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 24),
-                  Container(
-                    width: 150,
-                    height: 150,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(AppColors.primaryOrange),
-                        width: 4,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
+                    const SizedBox(height: 24),
+                    Container(
+                      width: 150,
+                      height: 150,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(AppColors.primaryOrange),
+                          width: 4,
                         ),
-                      ],
-                    ),
-                    child: user.fotoPerfil != null && user.fotoPerfil!.isNotEmpty
-                        ? ClipOval(
-                            child: Image.network(
-                              user.fotoPerfil!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Color(AppColors.accentBeige),
-                                  ),
-                                  child: const Icon(
-                                    Icons.person,
-                                    size: 72,
-                                    color: Color(AppColors.darkText),
-                                  ),
-                                );
-                              },
-                            ),
-                          )
-                        : Container(
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Color(AppColors.accentBeige),
-                            ),
-                            child: const Icon(
-                              Icons.person,
-                              size: 72,
-                              color: Color(AppColors.darkText),
-                            ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
                           ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    user.nombreCompleto ?? 'Usuario',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: const Color(AppColors.darkText),
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    user.email,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: const Color(AppColors.lightText),
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        await authProvider.signOut();
-                        if (context.mounted) {
-                          Navigator.of(context).pushNamedAndRemoveUntil(
-                            '/login',
-                            (route) => false,
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.logout_rounded),
-                      label: const Text('Cerrar Sesión'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red.shade400,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        ],
                       ),
+                      child: user.fotoPerfil != null && user.fotoPerfil!.isNotEmpty
+                          ? ClipOval(
+                              child: Image.network(
+                                user.fotoPerfil!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    decoration: const BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Color(AppColors.accentBeige),
+                                    ),
+                                    child: const Icon(
+                                      Icons.person,
+                                      size: 72,
+                                      color: Color(AppColors.darkText),
+                                    ),
+                                  );
+                                },
+                              ),
+                            )
+                          : Container(
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(AppColors.accentBeige),
+                              ),
+                              child: const Icon(
+                                Icons.person,
+                                size: 72,
+                                color: Color(AppColors.darkText),
+                              ),
+                            ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Divider(
-                    thickness: 1,
-                    height: 1,
-                    color: Color(0x22000000),
-                  ),
-                  const SizedBox(height: 24),
-                  Align(
-                    alignment: Alignment.center,
-                    child: Text(
-                      'Establecimientos favoritos',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    const SizedBox(height: 24),
+                    Text(
+                      user.nombreCompleto ?? 'Usuario',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: const Color(AppColors.darkText),
                           ),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (favoritesProvider.isLoading)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
-                      child: CircularProgressIndicator(
-                        color: Color(AppColors.primaryOrange),
+                    const SizedBox(height: 8),
+                    Text(
+                      user.email,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: const Color(AppColors.lightText),
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          await authProvider.signOut();
+                          if (context.mounted) {
+                            Navigator.of(context).pushNamedAndRemoveUntil(
+                              '/login',
+                              (route) => false,
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.logout_rounded),
+                        label: const Text('Cerrar Sesión'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade400,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
-                    )
-                  else if (favoritesProvider.favoriteRestaurants.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    const SizedBox(height: 24),
+                    const Divider(
+                      thickness: 1,
+                      height: 1,
+                      color: Color(0x22000000),
+                    ),
+                    const SizedBox(height: 24),
+                    Align(
+                      alignment: Alignment.center,
                       child: Text(
-                        'Todavía no tienes establecimientos favoritos.',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: const Color(AppColors.lightText),
-                            ),
+                        'Establecimientos favoritos',
                         textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: const Color(AppColors.darkText),
+                            ),
                       ),
-                    )
-                  else
-                    ListView.separated(
-                      itemCount: favoritesProvider.favoriteRestaurants.length,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final favorite = favoritesProvider.favoriteRestaurants[index];
-                        return AnimatedFavoriteCard(
-                          restaurant: favorite,
-                        );
-                      },
                     ),
+                    const SizedBox(height: 12),
+                    if (favoritesProvider.isLoading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: CircularProgressIndicator(
+                          color: Color(AppColors.primaryOrange),
+                        ),
+                      )
+                    else if (favoritesProvider.favoriteRestaurants.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Text(
+                          'Todavía no tienes establecimientos favoritos.',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: const Color(AppColors.lightText),
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                      )
+                    else
+                      ListView.separated(
+                        itemCount: favoritesProvider.favoriteRestaurants.length,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final favorite = favoritesProvider.favoriteRestaurants[index];
+                          return AnimatedFavoriteCard(
+                            restaurant: favorite,
+                          );
+                        },
+                      ),
                 ],
               ),
             );

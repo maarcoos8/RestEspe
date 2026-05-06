@@ -1,44 +1,64 @@
 import 'package:flutter/material.dart';
 
 import '../core/constants.dart';
+import '../core/role_constants.dart';
 
 /// Barra de navegación inferior reutilizable para todas las pantallas.
-/// Muestra tres opciones: Listado, Mapa y Perfil.
+/// Muestra opciones: Listado, Mapa, Perfil, y Administración (solo para roles != usuario).
 class AppBottomNavBar extends StatelessWidget {
   const AppBottomNavBar({
     super.key,
     required this.currentIndex,
     required this.onTap,
+    this.userRoleId,
   });
 
-  /// Índice del elemento actualmente seleccionado (0=Listado, 1=Mapa, 2=Perfil)
+  /// Índice del elemento actualmente seleccionado (0=Listado, 1=Mapa, 2=Perfil, 3=Admin)
   final int currentIndex;
 
   /// Callback cuando se selecciona una opción
   final ValueChanged<int> onTap;
 
+  /// ID del rol del usuario (null si no está autenticado)
+  final int? userRoleId;
+
   @override
   Widget build(BuildContext context) {
-    const items = [
-      _NavItem(
+    final items = [
+      const _NavItem(
         icon: Icons.home_outlined,
         activeIcon: Icons.home_rounded,
         label: 'Listado',
       ),
-      _NavItem(
+      const _NavItem(
         icon: Icons.explore_outlined,
         activeIcon: Icons.explore_rounded,
         label: 'Mapa',
       ),
-      _NavItem(
+      const _NavItem(
         icon: Icons.person_outline_rounded,
         activeIcon: Icons.person_rounded,
         label: 'Perfil',
       ),
+      // Mostrar tab de administración solo si el usuario no es un usuario normal (rol != 1)
+      if (userRoleId != null && userRoleId != RoleConstants.rolUsuario)
+        const _NavItem(
+          icon: Icons.admin_panel_settings_outlined,
+          activeIcon: Icons.admin_panel_settings_rounded,
+          label: 'Administración',
+        ),
     ];
 
     return Container(
-      color: const Color(AppColors.white),
+      decoration: const BoxDecoration(
+        color: Color(AppColors.white),
+        border: Border(
+          top: BorderSide(
+            color: Color(0x1A000000),
+            width: 1,
+          ),
+        ),
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: SafeArea(
         top: false,

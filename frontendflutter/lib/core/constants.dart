@@ -38,4 +38,6 @@ class AppColors {
   static const int errorRed = 0xFFDC2626;
   static const int successGreen = 0xFF10B981;
   static const int warningYellow = 0xFFF59E0B;
+  // Accents
+  static const int primaryBlue = 0xFF2563EB; // Azul para acciones de edición
 }

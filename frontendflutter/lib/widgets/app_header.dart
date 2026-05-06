@@ -8,6 +8,7 @@ class AppHeader extends StatelessWidget {
   const AppHeader({
     super.key,
     this.title = AppConstants.appName,
+    this.onTitlePressed,
     this.onProfilePressed,
     this.userProfilePhoto,
     this.showUserPhoto = true,
@@ -19,6 +20,9 @@ class AppHeader extends StatelessWidget {
 
   /// Callback cuando se pulsa el botón de perfil
   final VoidCallback? onProfilePressed;
+
+  /// Callback cuando se pulsa el título de la app.
+  final VoidCallback? onTitlePressed;
 
   /// URL de la foto del perfil del usuario (opcional)
   final String? userProfilePhoto;
@@ -46,12 +50,19 @@ class AppHeader extends StatelessWidget {
                 children: [
                   // Título a la izquierda
                   Expanded(
-                    child: Text(
-                      title,
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            color: const Color(AppColors.primaryOrange),
-                            fontWeight: FontWeight.w800,
-                          ),
+                    child: InkWell(
+                      onTap: onTitlePressed,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(
+                          title,
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                color: const Color(AppColors.primaryOrange),
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                      ),
                     ),
                   ),
                   // Botón de perfil a la derecha
