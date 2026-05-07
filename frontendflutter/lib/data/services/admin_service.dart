@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../models/admin_establishment_model.dart';
 import '../models/admin_user_model.dart';
 import '../models/categoria_dieta_model.dart';
 import '../models/rol_model.dart';
@@ -105,6 +106,38 @@ class AdminService {
       }
     } catch (e) {
       throw Exception('Error al obtener tipos de establecimiento: $e');
+    }
+  }
+
+  /// Obtiene una página de establecimientos para la pantalla de administración.
+  static Future<List<AdminEstablishmentModel>> getEstablecimientos({
+    int skip = 0,
+    int limit = 10,
+    String? nombre,
+  }) async {
+    try {
+      final queryParameters = <String, String>{
+        'skip': skip.toString(),
+        'limit': limit.toString(),
+      };
+      if (nombre != null && nombre.trim().isNotEmpty) {
+        queryParameters['nombre'] = nombre.trim();
+      }
+
+      final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento/filtrar')
+          .replace(queryParameters: queryParameters);
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
+        return jsonList
+            .map((json) => AdminEstablishmentModel.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+
+      throw Exception('Error al obtener establecimientos: ${response.statusCode}');
+    } catch (e) {
+      throw Exception('Error al obtener establecimientos: $e');
     }
   }
 

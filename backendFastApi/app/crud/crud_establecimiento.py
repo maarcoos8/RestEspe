@@ -74,6 +74,8 @@ def get_establecimientos_filtrados(
     tipos_establecimiento_ids: Optional[List[int]] = None,
     nombre: Optional[str] = None,
     categorias_dieta_ids: Optional[List[int]] = None,
+    skip: int = 0,
+    limit: int = 100,
 ):
     query = _base_establecimiento_filtrado_query(db)
 
@@ -104,7 +106,7 @@ def get_establecimientos_filtrados(
         )
         query = query.filter(Establecimiento.id_establecimiento.in_(subquery_categorias))
 
-    rows = query.all()
+    rows = query.order_by(Establecimiento.id_establecimiento.asc()).offset(skip).limit(limit).all()
     result = []
     for row in rows:
         result.append(

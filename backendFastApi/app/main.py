@@ -16,6 +16,7 @@ from app.api.v1.endpoints import (
 	resena as resena_endpoint,
 	categoria_dieta as categoria_dieta_endpoint,
 	fotografia as fotografia_endpoint,
+	media as media_endpoint,
 )
 from app.db.session import engine
 from app.db.base import Base
@@ -47,6 +48,8 @@ app.include_router(tipo_establecimiento_endpoint.router, prefix="/api/v1")
 app.include_router(tipo_item_menu_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de Fotografia
 app.include_router(fotografia_endpoint.router, prefix="/api/v1")
+# Registrar endpoint genérico de subida de media (Cloudinary)
+app.include_router(media_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de autenticación
 app.include_router(auth_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de Item Menu
