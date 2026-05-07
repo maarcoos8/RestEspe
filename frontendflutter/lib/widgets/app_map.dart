@@ -9,8 +9,8 @@ import 'package:flutter/scheduler.dart';
 import '../core/constants.dart';
 import '../providers/auth_provider.dart';
 import '../data/models/search_models.dart';
-import '../data/services/restaurant_detail_service.dart';
 import '../providers/search_provider.dart';
+import '../providers/restaurant_detail_provider.dart';
 import '../providers/favorites_provider.dart';
 import 'restaurant_card_widget.dart';
 
@@ -28,7 +28,6 @@ class AppMap extends StatefulWidget {
 class _AppMapState extends State<AppMap> {
   late MapController mapController;
   SearchProvider? _searchProvider;
-  late RestaurantDetailService _restaurantService;
   int? _syncedUserId;
   LatLng? _currentLocation;
   LatLng _mapCenter = const LatLng(40.4168, -3.7038);
@@ -41,7 +40,6 @@ class _AppMapState extends State<AppMap> {
   void initState() {
     super.initState();
     mapController = MapController();
-    _restaurantService = RestaurantDetailService();
     _initializeMap();
   }
 
@@ -361,66 +359,73 @@ class _AppMapState extends State<AppMap> {
   }
 
   /// Carga los detalles del restaurante y muestra un bottom sheet.
+  /// Utiliza RestaurantDetailProvider para cachear los detalles y evitar
+  /// múltiples llamadas API redundantes.
   Future<void> _showRestaurantDetails(BuildContext context, int idEstablecimiento) async {
-    // Mostrar un loading indicator mientras se cargan los datos
+    // Obtener el provider y cargar los detalles
+    final detailProvider = context.read<RestaurantDetailProvider>();
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => FutureBuilder(
-        future: _restaurantService.getRestaurantDetail(idEstablecimiento),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Container(
-              height: 200,
-              alignment: Alignment.center,
-              child: const CircularProgressIndicator(
-                color: Color(AppColors.primaryOrange),
-              ),
-            );
-          }
+      builder: (context) {
+        // El FutureBuilder solo se reevalúa una vez porque el Future es del provider
+        return FutureBuilder(
+          future: detailProvider.loadRestaurantDetail(idEstablecimiento),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Container(
+                height: 200,
+                alignment: Alignment.center,
+                child: const CircularProgressIndicator(
+                  color: Color(AppColors.primaryOrange),
+                ),
+              );
+            }
 
-          if (snapshot.hasError || snapshot.data == null) {
-            return Container(
-              height: 200,
-              alignment: Alignment.center,
-              child: Text(
-                'Error al cargar los detalles',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            );
-          }
+            if (snapshot.hasError || snapshot.data == null) {
+              return Container(
+                height: 200,
+                alignment: Alignment.center,
+                child: Text(
+                  'Error al cargar los detalles',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              );
+            }
 
-          final restaurant = snapshot.data!;
-          return RestaurantCardWidget(
-            restaurant: restaurant,
-            currentLocation: _currentLocation != null
-                ? Position(
-                    latitude: _currentLocation!.latitude,
-                    longitude: _currentLocation!.longitude,
-                    timestamp: DateTime.now(),
-                    accuracy: 0,
-                    altitude: 0,
-                    altitudeAccuracy: 0,
-                    heading: 0,
-                    headingAccuracy: 0,
-                    speed: 0,
-                    speedAccuracy: 0,
-                  )
-                : null,
-            onViewDetailsPressed: () {
-              // TODO: Navegar a la vista de detalles del establecimiento
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(
-                  SnackBar(
-                    content: Text('Ver detalles: ${restaurant.nombre}'),
-                    duration: const Duration(seconds: 1),
-                  ),
-                );
-            },
-          );
-        },
-      ),
+            final restaurant = snapshot.data!;
+            return RestaurantCardWidget(
+              restaurant: restaurant,
+              currentLocation: _currentLocation != null
+                  ? Position(
+                      latitude: _currentLocation!.latitude,
+                      longitude: _currentLocation!.longitude,
+                      timestamp: DateTime.now(),
+                      accuracy: 0,
+                      altitude: 0,
+                      altitudeAccuracy: 0,
+                      heading: 0,
+                      headingAccuracy: 0,
+                      speed: 0,
+                      speedAccuracy: 0,
+                    )
+                  : null,
+              onViewDetailsPressed: () {
+                // TODO: Navegar a la vista de detalles del establecimiento
+                ScaffoldMessenger.of(context)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(
+                    SnackBar(
+                      content: Text('Ver detalles: ${restaurant.nombre}'),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }

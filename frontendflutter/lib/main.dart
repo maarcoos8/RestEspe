@@ -7,6 +7,7 @@ import 'package:frontendflutter/screens/login_screen.dart';
 import 'package:frontendflutter/screens/home_screen.dart';
 import 'package:frontendflutter/providers/search_provider.dart';
 import 'package:frontendflutter/providers/favorites_provider.dart';
+import 'package:frontendflutter/providers/restaurant_detail_provider.dart';
 
 void main() {
   runApp(const MyApp());
@@ -22,6 +23,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => SearchProvider()),
         ChangeNotifierProvider(create: (_) => FavoritesProvider()),
+        ChangeNotifierProvider(create: (_) => RestaurantDetailProvider()),
       ],
       child: MaterialApp(
         title: AppConstants.appName,
