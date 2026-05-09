@@ -9,6 +9,7 @@ import '../data/services/admin_service.dart';
 import '../data/services/restaurant_detail_service.dart';
 import '../widgets/restaurant_card_widget.dart';
 import '../widgets/scaffold_with_nav.dart';
+import 'create_establishment_screen.dart';
 
 /// Pantalla de administración de establecimientos (superadmin).
 ///
@@ -147,11 +148,32 @@ class _AdminEstablishmentsScreenState extends State<AdminEstablishmentsScreen> {
     return details.whereType<RestaurantDetail>().toList(growable: false);
   }
 
+  /// Navega a la pantalla de crear establecimiento.
+  void _navigateToCreateEstablishment() {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+        pageBuilder: (context, animation, secondaryAnimation) => const CreateEstablishmentScreen(),
+      ),
+    ).then((result) {
+      // Si se creó un nuevo establecimiento, recarga la lista
+      if (result == true) {
+        _loadFirstPage();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return ScaffoldWithNav(
       title: 'Administración de Establecimientos',
       currentIndex: 3,
+      floatingActionButton: FloatingActionButton(
+        onPressed: _navigateToCreateEstablishment,
+        backgroundColor: const Color(AppColors.primaryOrange),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
       body: RefreshIndicator(
         onRefresh: _loadFirstPage,
         child: ListView(

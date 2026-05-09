@@ -14,11 +14,13 @@ class ScaffoldWithNav extends StatelessWidget {
     required this.body,
     this.title,
     this.currentIndex = 1,
+    this.floatingActionButton,
   });
 
   final Widget body;
   final String? title;
   final int currentIndex;
+  final Widget? floatingActionButton;
 
   void _onNavTap(BuildContext context, int index) {
     if (index == currentIndex) return;
@@ -124,6 +126,7 @@ class ScaffoldWithNav extends StatelessWidget {
             )
           : null,
       body: body,
+      floatingActionButton: floatingActionButton,
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: currentIndex,
         userRoleId: context.read<AuthProvider>().currentUser?.idRol,

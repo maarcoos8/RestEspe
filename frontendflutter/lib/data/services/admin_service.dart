@@ -210,4 +210,61 @@ class AdminService {
       throw Exception(_extractErrorMessage(response, 'Error al actualizar tipo de establecimiento'));
     }
   }
+
+  /// Crea un nuevo establecimiento.
+  static Future<int> createEstablishment(dynamic formData) async {
+    final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento/');
+    
+    // formData debe tener método toJson() que devuelva Map<String, dynamic>
+    final body = formData is Map<String, dynamic> 
+        ? formData 
+        : (formData.toJson() as Map<String, dynamic>);
+
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode == 201) {
+      try {
+        final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
+        final idEstablecimiento = jsonResponse['id_establecimiento'] as int;
+
+        // Si hay tipos de establecimiento, crearlos
+        if (formData.tiposEstablecimientoIds?.isNotEmpty ?? false) {
+          for (final tipoId in formData.tiposEstablecimientoIds) {
+            await createEstablecimientoTipo(idEstablecimiento, tipoId);
+          }
+        }
+
+        return idEstablecimiento;
+      } catch (e) {
+        throw Exception('Error al parsear respuesta: $e');
+      }
+    } else {
+      throw Exception(
+        _extractErrorMessage(response, 'Error al crear establecimiento (${response.statusCode})'),
+      );
+    }
+  }
+
+  /// Crea una relación entre un establecimiento y un tipo.
+  static Future<void> createEstablecimientoTipo(int idEstablecimiento, int idTipo) async {
+    final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento_tipo/');
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'id_establecimiento': idEstablecimiento,
+        'id_tipo_establecimiento': idTipo,
+      }),
+    );
+
+    if (response.statusCode != 201) {
+      throw Exception(
+        _extractErrorMessage(response, 'Error al asignar tipo de establecimiento'),
+      );
+    }
+  }
 }
