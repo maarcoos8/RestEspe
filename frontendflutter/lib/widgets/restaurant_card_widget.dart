@@ -63,205 +63,258 @@ class _RestaurantCardWidgetState extends State<RestaurantCardWidget> {
           ),
           borderRadius: BorderRadius.all(Radius.circular(20)),
         ),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, isCompact ? 12 : 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: isCompact ? 4 : 8),
-
-              // Nombre y botón favorito
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Imagen del establecimiento o icono genérico
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+              child: Container(
+                height: 200,
+                width: double.infinity,
+                color: const Color(AppColors.accentBeige).withOpacity(0.3),
+                child: widget.restaurant.imagenUrl != null && widget.restaurant.imagenUrl!.isNotEmpty
+                    ? Image.network(
+                        widget.restaurant.imagenUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return _buildGenericImage();
+                        },
+                      )
+                    : _buildGenericImage(),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, isCompact ? 12 : 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      widget.restaurant.nombre,
-                      style: (isCompact
-                              ? Theme.of(context).textTheme.titleLarge
-                              : Theme.of(context).textTheme.headlineSmall)
-                          ?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  FavoriteButton(
-                    establishmentId: widget.restaurant.idEstablecimiento,
-                    size: isCompact ? 24 : 28,
-                  ),
-                ],
-              ),
-              SizedBox(height: isCompact ? 6 : 8),
+                  SizedBox(height: isCompact ? 4 : 8),
 
-              // Tipos de establecimiento
-              if (widget.restaurant.tiposEstablecimiento.isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.only(bottom: isCompact ? 8 : 12),
-                  child: Text(
-                    widget.restaurant.tiposEstablecimiento
-                        .map((tipo) => tipo.nombreCategoria)
-                        .join(' • '),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
+                  // Nombre y botón favorito
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.restaurant.nombre,
+                          style: (isCompact
+                                  ? Theme.of(context).textTheme.titleLarge
+                                  : Theme.of(context).textTheme.headlineSmall)
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(width: 12),
+                      FavoriteButton(
+                        establishmentId: widget.restaurant.idEstablecimiento,
+                        size: isCompact ? 24 : 28,
+                      ),
+                    ],
                   ),
-                ),
+                  SizedBox(height: isCompact ? 6 : 8),
 
-              // Categorías de dieta con fondo y color
-              if (widget.restaurant.categoriasDieta.isNotEmpty)
-                Padding(
-                  // Quitar padding inferior extra para que quede simétrico con el separador
-                  padding: EdgeInsets.only(bottom: isCompact ? 0 : 0),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 6,
-                    children: widget.restaurant.categoriasDieta
-                        .map(
-                          (cat) => Container(
+                  // Tipos de establecimiento
+                  if (widget.restaurant.tiposEstablecimiento.isNotEmpty)
+                    Padding(
+                      padding: EdgeInsets.only(bottom: isCompact ? 8 : 12),
+                      child: Text(
+                        widget.restaurant.tiposEstablecimiento
+                            .map((tipo) => tipo.nombreCategoria)
+                            .join(' • '),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey[600],
+                            ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+
+                  // Categorías de dieta con fondo y color
+                  if (widget.restaurant.categoriasDieta.isNotEmpty)
+                    Padding(
+                      padding: EdgeInsets.only(bottom: isCompact ? 0 : 0),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: widget.restaurant.categoriasDieta
+                            .map(
+                              (cat) => Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(AppColors.primaryOrange).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Text(
+                                  cat.nombreDieta,
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                        color: const Color(AppColors.primaryOrange),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+
+                  SizedBox(height: isCompact ? 8 : 10),
+                  const Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: Color(0x1F000000),
+                  ),
+                  SizedBox(height: isCompact ? 8 : 10),
+
+                  // Distancia y puntuación en fila
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Distancia y estado de verificación
+                      Row(
+                        children: [
+                          if (distance != null) ...[
+                            const Icon(
+                              Icons.location_on_outlined,
+                              size: 18,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              distance < 1
+                                  ? '${(distance * 1000).toStringAsFixed(0)} m'
+                                  : '${distance.toStringAsFixed(1)} km',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
+                            ),
+                            const SizedBox(width: 10),
+                          ],
+                          Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
+                              horizontal: 8,
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(AppColors.primaryOrange).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(16),
+                              color: _verificationBackgroundColor(widget.restaurant.estadoVerificado),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: _verificationForegroundColor(widget.restaurant.estadoVerificado)
+                                    .withValues(alpha: 0.35),
+                                width: 1,
+                              ),
                             ),
                             child: Text(
-                              cat.nombreDieta,
+                              widget.restaurant.estadoVerificado == true ? 'Verificado' : 'No verificado',
                               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: const Color(AppColors.primaryOrange),
+                                    color: _verificationForegroundColor(widget.restaurant.estadoVerificado),
                                     fontWeight: FontWeight.w600,
                                   ),
                             ),
                           ),
-                        )
-                        .toList(),
-                  ),
-                ),
+                        ],
+                      ),
 
-              SizedBox(height: isCompact ? 8 : 10),
-              const Divider(
-                height: 1,
-                thickness: 1,
-                color: Color(0x1F000000),
-              ),
-              SizedBox(height: isCompact ? 8 : 10),
-
-              // Distancia y puntuación en fila
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Distancia y estado de verificación
-                  Row(
-                    children: [
-                      if (distance != null) ...[
-                        const Icon(
-                          Icons.location_on_outlined,
-                          size: 18,
-                          color: Colors.grey,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          distance < 1
-                              ? '${(distance * 1000).toStringAsFixed(0)} m'
-                              : '${distance.toStringAsFixed(1)} km',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.grey[600],
+                      // Puntuación
+                      if (rating != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _ratingBackgroundColor(rating),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _ratingForegroundColor(rating).withValues(alpha: 0.35),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${rating.toStringAsFixed(1)} (${widget.restaurant.numeroResenas})',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      color: _ratingForegroundColor(rating),
+                                      fontWeight: FontWeight.w600,
+                                    ),
                               ),
-                        ),
-                        const SizedBox(width: 10),
-                      ],
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _verificationBackgroundColor(widget.restaurant.estadoVerificado),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: _verificationForegroundColor(widget.restaurant.estadoVerificado)
-                                .withValues(alpha: 0.35),
-                            width: 1,
+                            ],
                           ),
                         ),
+                    ],
+                  ),
+
+                  SizedBox(height: isCompact ? 8 : 16),
+
+                  // Botón "Ver detalles"
+                  if (widget.onViewDetailsPressed != null)
+                    SizedBox(
+                      width: double.infinity,
+                      height: isCompact ? 44 : 48,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(AppColors.primaryOrange),
+                          foregroundColor: const Color(AppColors.white),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                        onPressed: widget.onViewDetailsPressed,
                         child: Text(
-                          widget.restaurant.estadoVerificado == true ? 'Verificado' : 'No verificado',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: _verificationForegroundColor(widget.restaurant.estadoVerificado),
+                          'Ver detalles',
+                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                color: const Color(AppColors.white),
                                 fontWeight: FontWeight.w600,
                               ),
                         ),
                       ),
-                    ],
-                  ),
-
-                  // Puntuación
-                  if (rating != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _ratingBackgroundColor(rating),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: _ratingForegroundColor(rating).withValues(alpha: 0.35),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '${rating.toStringAsFixed(1)} (${widget.restaurant.numeroResenas})',
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: _ratingForegroundColor(rating),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                        ],
-                      ),
                     ),
                 ],
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-              SizedBox(height: isCompact ? 8 : 16),
-
-              // Botón "Ver detalles"
-              if (widget.onViewDetailsPressed != null)
-                SizedBox(
-                  width: double.infinity,
-                  height: isCompact ? 44 : 48,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(AppColors.primaryOrange),
-                      foregroundColor: const Color(AppColors.white),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 2,
-                    ),
-                    onPressed: widget.onViewDetailsPressed,
-                    child: Text(
-                      'Ver detalles',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: const Color(AppColors.white),
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
+  /// Widget genérico con icono cuando no hay imagen del establecimiento.
+  Widget _buildGenericImage() {
+    return Container(
+      color: const Color(AppColors.accentBeige).withOpacity(0.3),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.restaurant_menu_rounded,
+              size: 64,
+              color: const Color(AppColors.primaryOrange).withOpacity(0.5),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Sin imagen',
+              style: TextStyle(
+                color: const Color(AppColors.primaryOrange).withOpacity(0.5),
+                fontSize: 14,
+              ),
+            ),
+          ],
         ),
       ),
     );

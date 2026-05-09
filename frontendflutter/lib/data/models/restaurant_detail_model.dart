@@ -14,6 +14,7 @@ class RestaurantDetail {
     required this.tiposEstablecimiento,
     required this.puntuacionMedia,
     required this.numeroResenas,
+    this.imagenUrl,
   });
 
   final int idEstablecimiento;
@@ -27,6 +28,7 @@ class RestaurantDetail {
   final List<RestaurantType> tiposEstablecimiento;
   final double? puntuacionMedia;
   final int numeroResenas;
+  final String? imagenUrl;
 }
 
 /// Categoría de dieta de un restaurante.
