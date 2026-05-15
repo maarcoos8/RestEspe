@@ -10,6 +10,7 @@ import '../data/services/restaurant_detail_service.dart';
 import '../widgets/restaurant_card_widget.dart';
 import '../widgets/scaffold_with_nav.dart';
 import 'create_establishment_screen.dart';
+import 'restaurant_detail_screen.dart';
 
 /// Pantalla de administración de establecimientos (superadmin).
 ///
@@ -18,7 +19,8 @@ class AdminEstablishmentsScreen extends StatefulWidget {
   const AdminEstablishmentsScreen({super.key});
 
   @override
-  State<AdminEstablishmentsScreen> createState() => _AdminEstablishmentsScreenState();
+  State<AdminEstablishmentsScreen> createState() =>
+      _AdminEstablishmentsScreenState();
 }
 
 class _AdminEstablishmentsScreenState extends State<AdminEstablishmentsScreen> {
@@ -26,7 +28,8 @@ class _AdminEstablishmentsScreenState extends State<AdminEstablishmentsScreen> {
 
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _filterController = TextEditingController();
-  final RestaurantDetailService _restaurantDetailService = RestaurantDetailService();
+  final RestaurantDetailService _restaurantDetailService =
+      RestaurantDetailService();
   Timer? _debounceTimer;
 
   final List<RestaurantDetail> _establishments = [];
@@ -140,28 +143,45 @@ class _AdminEstablishmentsScreenState extends State<AdminEstablishmentsScreen> {
     }
   }
 
-  Future<List<RestaurantDetail>> _loadRestaurantDetails(List<AdminEstablishmentModel> items) async {
+  Future<List<RestaurantDetail>> _loadRestaurantDetails(
+    List<AdminEstablishmentModel> items,
+  ) async {
     final details = await Future.wait(
-      items.map((item) => _restaurantDetailService.getRestaurantDetail(item.idEstablecimiento)),
+      items.map(
+        (item) => _restaurantDetailService.getRestaurantDetail(
+          item.idEstablecimiento,
+        ),
+      ),
     );
 
     return details.whereType<RestaurantDetail>().toList(growable: false);
   }
 
+  void _openRestaurantDetail(RestaurantDetail restaurant) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RestaurantDetailScreen(restaurant: restaurant),
+      ),
+    );
+  }
+
   /// Navega a la pantalla de crear establecimiento.
   void _navigateToCreateEstablishment() {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        transitionDuration: Duration.zero,
-        reverseTransitionDuration: Duration.zero,
-        pageBuilder: (context, animation, secondaryAnimation) => const CreateEstablishmentScreen(),
-      ),
-    ).then((result) {
-      // Si se creó un nuevo establecimiento, recarga la lista
-      if (result == true) {
-        _loadFirstPage();
-      }
-    });
+    Navigator.of(context)
+        .push(
+          PageRouteBuilder(
+            transitionDuration: Duration.zero,
+            reverseTransitionDuration: Duration.zero,
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                const CreateEstablishmentScreen(),
+          ),
+        )
+        .then((result) {
+          // Si se creó un nuevo establecimiento, recarga la lista
+          if (result == true) {
+            _loadFirstPage();
+          }
+        });
   }
 
   @override
@@ -202,7 +222,9 @@ class _AdminEstablishmentsScreenState extends State<AdminEstablishmentsScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(AppColors.primaryOrange)),
+                    borderSide: const BorderSide(
+                      color: Color(AppColors.primaryOrange),
+                    ),
                   ),
                 ),
               ),
@@ -246,7 +268,8 @@ class _AdminEstablishmentsScreenState extends State<AdminEstablishmentsScreen> {
                 physics: const NeverScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                 itemCount: _establishments.length + (_isLoadingMore ? 1 : 0),
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   if (index >= _establishments.length) {
                     return const Padding(
@@ -264,6 +287,8 @@ class _AdminEstablishmentsScreenState extends State<AdminEstablishmentsScreen> {
                     child: RestaurantCardWidget(
                       restaurant: _establishments[index],
                       compact: true,
+                      onCardTap: () =>
+                          _openRestaurantDetail(_establishments[index]),
                     ),
                   );
                 },

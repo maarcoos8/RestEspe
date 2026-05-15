@@ -15,7 +15,7 @@ class AppHeader extends StatelessWidget {
     this.showProfileButton = true,
   });
 
-  /// Título a mostrar en el header (por defecto "RestEspe")
+  /// Título a mostrar en el header (por defecto "PinFood")
   final String title;
 
   /// Callback cuando se pulsa el botón de perfil
@@ -57,7 +57,8 @@ class AppHeader extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Text(
                           title,
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(
                                 color: const Color(AppColors.primaryOrange),
                                 fontWeight: FontWeight.w800,
                               ),
@@ -88,7 +89,10 @@ class AppHeader extends StatelessWidget {
                             ),
                           ],
                         ),
-                        child: showUserPhoto && userProfilePhoto != null && userProfilePhoto!.isNotEmpty
+                        child:
+                            showUserPhoto &&
+                                userProfilePhoto != null &&
+                                userProfilePhoto!.isNotEmpty
                             ? ClipOval(
                                 child: Image.network(
                                   userProfilePhoto!,
@@ -115,10 +119,7 @@ class AppHeader extends StatelessWidget {
               ),
             ),
             // Divisor claro con la página
-            Container(
-              height: 1,
-              color: const Color(AppColors.accentBeige),
-            ),
+            Container(height: 1, color: const Color(AppColors.accentBeige)),
           ],
         ),
       ),

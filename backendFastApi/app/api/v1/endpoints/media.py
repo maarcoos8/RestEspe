@@ -20,7 +20,7 @@ async def upload_image_generic(file: UploadFile = File(...), use_case: str = "ge
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="use_case no valido")
 
     try:
-        result = upload_image(file.file, folder=f"restespe/{use_case}")
+        result = upload_image(file.file, folder=f"pinfood/{use_case}")
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     except Exception as e:

@@ -1,9 +1,9 @@
-# 🤖 Protocolo de Desarrollo Frontend - Proyecto RestEspe
+# 🤖 Protocolo de Desarrollo Frontend - Proyecto PinFood
 
-Este documento describe la arquitectura, estándares y el contexto funcional del frontend desarrollado en **Flutter** para el TFG "RestEspe".
+Este documento describe la arquitectura, estándares y el contexto funcional del frontend desarrollado en **Flutter** para el TFG "PinFood".
 
 ## 📝 Contexto de la Aplicación
-**RestEspe** es una plataforma de descubrimiento gastronómico que combina **FastAPI**, **PostGIS** y **Flutter**. La app permite a los usuarios localizar establecimientos según preferencias dietéticas específicas (Vegano, Sin Gluten, Halal, etc.) mediante un sistema de filtrado avanzado basado en una relación N:M entre platos y categorías.
+**PinFood** es una plataforma de descubrimiento gastronómico que combina **FastAPI**, **PostGIS** y **Flutter**. La app permite a los usuarios localizar establecimientos según preferencias dietéticas específicas (Vegano, Sin Gluten, Halal, etc.) mediante un sistema de filtrado avanzado basado en una relación N:M entre platos y categorías.
 
 ---
 

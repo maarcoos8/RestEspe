@@ -13,6 +13,7 @@ import '../providers/search_provider.dart';
 import '../providers/restaurant_detail_provider.dart';
 import '../providers/favorites_provider.dart';
 import 'restaurant_card_widget.dart';
+import '../screens/restaurant_detail_screen.dart';
 
 /// Widget de mapa que muestra OpenStreetMap.
 /// Se centra en Madrid por defecto, pero intenta usar la ubicación del dispositivo si está disponible.
@@ -50,7 +51,11 @@ class _AppMapState extends State<AppMap> {
     final currentUserId = context.read<AuthProvider>().currentUser?.idUsuario;
     if (_syncedUserId != currentUserId) {
       _syncedUserId = currentUserId;
-      unawaited(context.read<FavoritesProvider>().syncUser(context.read<AuthProvider>().currentUser));
+      unawaited(
+        context.read<FavoritesProvider>().syncUser(
+          context.read<AuthProvider>().currentUser,
+        ),
+      );
     }
   }
 
@@ -112,7 +117,10 @@ class _AppMapState extends State<AppMap> {
           ).timeout(const Duration(seconds: 8));
 
           if (mounted) {
-            final currentLocation = LatLng(position.latitude, position.longitude);
+            final currentLocation = LatLng(
+              position.latitude,
+              position.longitude,
+            );
             setState(() {
               _currentLocation = currentLocation;
               _mapCenter = currentLocation;
@@ -124,7 +132,8 @@ class _AppMapState extends State<AppMap> {
           }
         } catch (_) {
           // Si no se consigue una posición inmediata, prueba con la última conocida.
-          final Position? lastKnownPosition = await Geolocator.getLastKnownPosition();
+          final Position? lastKnownPosition =
+              await Geolocator.getLastKnownPosition();
           if (lastKnownPosition != null && mounted) {
             final lastKnownLocation = LatLng(
               lastKnownPosition.latitude,
@@ -182,7 +191,9 @@ class _AppMapState extends State<AppMap> {
     // Aplicar el focus con 2 niveles de zoom menos, asegurando límites
     final double minZoom = 5.0;
     final double maxZoom = 18.0;
-    final double adjustedZoom = (request.zoom - 2).clamp(minZoom, maxZoom).toDouble();
+    final double adjustedZoom = (request.zoom - 2)
+        .clamp(minZoom, maxZoom)
+        .toDouble();
     _moveMap(request.coordinates, adjustedZoom);
 
     // Si la solicitud incluye un establecimiento, mostrar sus detalles después de mover el mapa
@@ -263,7 +274,11 @@ class _AppMapState extends State<AppMap> {
           });
         },
         interactionOptions: const InteractionOptions(
-          flags: InteractiveFlag.drag | InteractiveFlag.doubleTapZoom | InteractiveFlag.pinchZoom | InteractiveFlag.scrollWheelZoom,
+          flags:
+              InteractiveFlag.drag |
+              InteractiveFlag.doubleTapZoom |
+              InteractiveFlag.pinchZoom |
+              InteractiveFlag.scrollWheelZoom,
         ),
         onPositionChanged: (camera, hasGesture) {
           if (!mounted) {
@@ -284,7 +299,8 @@ class _AppMapState extends State<AppMap> {
           maxZoom: 19,
         ),
         MarkerLayer(
-          markers: _searchProvider?.visibleRestaurants
+          markers:
+              _searchProvider?.visibleRestaurants
                   .where((restaurant) => restaurant.coordinates != null)
                   .map(
                     (restaurant) => Marker(
@@ -294,9 +310,15 @@ class _AppMapState extends State<AppMap> {
                       // Ajuste de alineación: usar topCenter para corregir la orientación
                       alignment: Alignment.topCenter,
                       child: Transform.translate(
-                        offset: const Offset(0, 6), // bajar el icono 6px para compensar margen
+                        offset: const Offset(
+                          0,
+                          6,
+                        ), // bajar el icono 6px para compensar margen
                         child: GestureDetector(
-                          onTap: () => _showRestaurantDetails(context, restaurant.idEstablecimiento),
+                          onTap: () => _showRestaurantDetails(
+                            context,
+                            restaurant.idEstablecimiento,
+                          ),
                           child: const Icon(
                             Icons.location_on_rounded,
                             color: Color(AppColors.primaryOrange),
@@ -361,12 +383,15 @@ class _AppMapState extends State<AppMap> {
   /// Carga los detalles del restaurante y muestra un bottom sheet.
   /// Utiliza RestaurantDetailProvider para cachear los detalles y evitar
   /// múltiples llamadas API redundantes.
-  Future<void> _showRestaurantDetails(BuildContext context, int idEstablecimiento) async {
+  Future<void> _showRestaurantDetails(
+    BuildContext rootContext,
+    int idEstablecimiento,
+  ) async {
     // Obtener el provider y cargar los detalles
-    final detailProvider = context.read<RestaurantDetailProvider>();
-    
+    final detailProvider = rootContext.read<RestaurantDetailProvider>();
+
     showModalBottomSheet(
-      context: context,
+      context: rootContext,
       isScrollControlled: true,
       builder: (context) {
         // El FutureBuilder solo se reevalúa una vez porque el Future es del provider
@@ -411,16 +436,54 @@ class _AppMapState extends State<AppMap> {
                       speedAccuracy: 0,
                     )
                   : null,
-              onViewDetailsPressed: () {
-                // TODO: Navegar a la vista de detalles del establecimiento
-                ScaffoldMessenger.of(context)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(
-                    SnackBar(
-                      content: Text('Ver detalles: ${restaurant.nombre}'),
-                      duration: const Duration(seconds: 1),
+              showViewDetailsButton: true,
+              onCardTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(rootContext).push(
+                  MaterialPageRoute(
+                    builder: (_) => RestaurantDetailScreen(
+                      restaurant: restaurant,
+                      currentLocation: _currentLocation != null
+                          ? Position(
+                              latitude: _currentLocation!.latitude,
+                              longitude: _currentLocation!.longitude,
+                              timestamp: DateTime.now(),
+                              accuracy: 0,
+                              altitude: 0,
+                              altitudeAccuracy: 0,
+                              heading: 0,
+                              headingAccuracy: 0,
+                              speed: 0,
+                              speedAccuracy: 0,
+                            )
+                          : null,
                     ),
-                  );
+                  ),
+                );
+              },
+              onViewDetailsPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(rootContext).push(
+                  MaterialPageRoute(
+                    builder: (_) => RestaurantDetailScreen(
+                      restaurant: restaurant,
+                      currentLocation: _currentLocation != null
+                          ? Position(
+                              latitude: _currentLocation!.latitude,
+                              longitude: _currentLocation!.longitude,
+                              timestamp: DateTime.now(),
+                              accuracy: 0,
+                              altitude: 0,
+                              altitudeAccuracy: 0,
+                              heading: 0,
+                              headingAccuracy: 0,
+                              speed: 0,
+                              speedAccuracy: 0,
+                            )
+                          : null,
+                    ),
+                  ),
+                );
               },
             );
           },
@@ -463,11 +526,7 @@ class _MapActionButton extends StatelessWidget {
         child: SizedBox(
           width: 42,
           height: 42,
-          child: Icon(
-            icon,
-            size: 22,
-            color: iconColor,
-          ),
+          child: Icon(icon, size: 22, color: iconColor),
         ),
       ),
     );

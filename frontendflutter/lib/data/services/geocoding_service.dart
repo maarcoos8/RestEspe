@@ -75,7 +75,7 @@ class ReverseGeocodeResult {
 /// Servicio para geocodificación usando Nominatim (OpenStreetMap)
 class GeocodingService {
   static const String _nominatimBaseUrl = 'https://nominatim.openstreetmap.org';
-  static const String _userAgent = 'RestEspeApp/1.0';
+  static const String _userAgent = 'PinFoodApp/1.0';
 
   /// Busca ubicaciones basadas en un texto de búsqueda
   static Future<List<LocationSuggestion>> searchLocations(
@@ -99,16 +99,19 @@ class GeocodingService {
         params['lon'] = longitude.toString();
       }
 
-      final uri = Uri.parse('$_nominatimBaseUrl/search').replace(queryParameters: params);
-      final response = await http.get(
-        uri,
-        headers: {'User-Agent': _userAgent},
-      );
+      final uri = Uri.parse(
+        '$_nominatimBaseUrl/search',
+      ).replace(queryParameters: params);
+      final response = await http.get(uri, headers: {'User-Agent': _userAgent});
 
       if (response.statusCode == 200) {
-        final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
         return jsonList
-            .map((json) => LocationSuggestion.fromJson(json as Map<String, dynamic>))
+            .map(
+              (json) =>
+                  LocationSuggestion.fromJson(json as Map<String, dynamic>),
+            )
             .toList();
       }
 
@@ -133,11 +136,10 @@ class GeocodingService {
         'addressdetails': '1',
       };
 
-      final uri = Uri.parse('$_nominatimBaseUrl/reverse').replace(queryParameters: params);
-      final response = await http.get(
-        uri,
-        headers: {'User-Agent': _userAgent},
-      );
+      final uri = Uri.parse(
+        '$_nominatimBaseUrl/reverse',
+      ).replace(queryParameters: params);
+      final response = await http.get(uri, headers: {'User-Agent': _userAgent});
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;

@@ -51,7 +51,7 @@ async def upload_fotografia(
     File field: `file` (la imagen)
     """
     try:
-        upload_result = upload_image(file.file, folder="restespe/fotografia")
+        upload_result = upload_image(file.file, folder="pinfood/fotografia")
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     except Exception as e:

@@ -9,6 +9,7 @@ import '../data/models/restaurant_detail_model.dart';
 import '../data/services/admin_service.dart';
 import '../data/services/restaurant_detail_service.dart';
 import '../widgets/restaurant_card_widget.dart';
+import 'restaurant_detail_screen.dart';
 
 /// Pantalla de listado de establecimientos para usuarios.
 ///
@@ -18,7 +19,8 @@ class EstablishmentsListScreen extends StatefulWidget {
   const EstablishmentsListScreen({super.key});
 
   @override
-  State<EstablishmentsListScreen> createState() => _EstablishmentsListScreenState();
+  State<EstablishmentsListScreen> createState() =>
+      _EstablishmentsListScreenState();
 }
 
 class _EstablishmentsListScreenState extends State<EstablishmentsListScreen> {
@@ -26,7 +28,8 @@ class _EstablishmentsListScreenState extends State<EstablishmentsListScreen> {
 
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _filterController = TextEditingController();
-  final RestaurantDetailService _restaurantDetailService = RestaurantDetailService();
+  final RestaurantDetailService _restaurantDetailService =
+      RestaurantDetailService();
   final List<RestaurantDetail> _establishments = [];
 
   Timer? _debounceTimer;
@@ -128,6 +131,7 @@ class _EstablishmentsListScreenState extends State<EstablishmentsListScreen> {
   }
 
   Future<void> _loadFirstPage() async {
+    if (!mounted) return;
     setState(() {
       _isInitialLoading = true;
       _errorMessage = null;
@@ -163,6 +167,7 @@ class _EstablishmentsListScreenState extends State<EstablishmentsListScreen> {
 
   Future<void> _loadMore() async {
     if (_isLoadingMore || !_hasMore) return;
+    if (!mounted) return;
 
     setState(() {
       _isLoadingMore = true;
@@ -193,15 +198,22 @@ class _EstablishmentsListScreenState extends State<EstablishmentsListScreen> {
     }
   }
 
-  Future<List<RestaurantDetail>> _loadRestaurantDetails(List<AdminEstablishmentModel> items) async {
+  Future<List<RestaurantDetail>> _loadRestaurantDetails(
+    List<AdminEstablishmentModel> items,
+  ) async {
     final details = await Future.wait(
-      items.map((item) => _restaurantDetailService.getRestaurantDetail(item.idEstablecimiento)),
+      items.map(
+        (item) => _restaurantDetailService.getRestaurantDetail(
+          item.idEstablecimiento,
+        ),
+      ),
     );
 
     return details.whereType<RestaurantDetail>().toList(growable: false);
   }
 
   void _sortByProximityIfAvailable() {
+    if (!mounted) return;
     final location = _currentLocation;
     if (location == null || _establishments.length < 2) {
       return;
@@ -246,6 +258,30 @@ class _EstablishmentsListScreenState extends State<EstablishmentsListScreen> {
     await _loadFirstPage();
   }
 
+  void _openRestaurantDetail(RestaurantDetail restaurant) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RestaurantDetailScreen(
+          restaurant: restaurant,
+          currentLocation: _currentLocation != null
+              ? Position(
+                  latitude: _currentLocation!.latitude,
+                  longitude: _currentLocation!.longitude,
+                  timestamp: DateTime.now(),
+                  accuracy: 0,
+                  altitude: 0,
+                  altitudeAccuracy: 0,
+                  heading: 0,
+                  headingAccuracy: 0,
+                  speed: 0,
+                  speedAccuracy: 0,
+                )
+              : null,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -278,7 +314,9 @@ class _EstablishmentsListScreenState extends State<EstablishmentsListScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(AppColors.primaryOrange)),
+                    borderSide: const BorderSide(
+                      color: Color(AppColors.primaryOrange),
+                    ),
                   ),
                 ),
               ),
@@ -344,7 +382,8 @@ class _EstablishmentsListScreenState extends State<EstablishmentsListScreen> {
                 physics: const NeverScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                 itemCount: _establishments.length + (_isLoadingMore ? 1 : 0),
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   if (index >= _establishments.length) {
                     return const Padding(
@@ -361,6 +400,8 @@ class _EstablishmentsListScreenState extends State<EstablishmentsListScreen> {
                     restaurant: _establishments[index],
                     currentLocation: _currentLocation,
                     compact: true,
+                    onCardTap: () =>
+                        _openRestaurantDetail(_establishments[index]),
                   );
                 },
               ),

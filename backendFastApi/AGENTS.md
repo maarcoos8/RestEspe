@@ -1,4 +1,4 @@
-# Contexto del Proyecto: Aplicación para Dietas Específicas (RestEspe)
+# Contexto del Proyecto: Aplicación para Dietas Específicas (PinFood)
 
 ## 1. Descripción General
 El proyecto consiste en el desarrollo de una aplicación móvil multiplataforma orientada a la localización geográfica de establecimientos de restauración que sean aptos para dietas específicas (vegana, halal, sin gluten, etc.). El valor diferencial de esta aplicación es su **sistema de información verificada**, diseñado para eliminar la incertidumbre de los datos públicos mediante la validación por parte de propietarios y administradores.

@@ -17,20 +17,21 @@ class SearchService {
       return const [];
     }
 
-    final uri = Uri.https('nominatim.openstreetmap.org', '/search', <String, String>{
-      'format': 'jsonv2',
-      'addressdetails': '1',
-      'limit': '6',
-      'accept-language': 'es',
-      'countrycodes': 'es',
-      'q': normalizedQuery,
-    });
+    final uri =
+        Uri.https('nominatim.openstreetmap.org', '/search', <String, String>{
+          'format': 'jsonv2',
+          'addressdetails': '1',
+          'limit': '6',
+          'accept-language': 'es',
+          'countrycodes': 'es',
+          'q': normalizedQuery,
+        });
 
     final response = await _client.get(
       uri,
       headers: const <String, String>{
         'Accept': 'application/json',
-        'User-Agent': 'RestEspe/1.0',
+        'User-Agent': 'PinFood/1.0',
       },
     );
 
@@ -71,10 +72,9 @@ class SearchService {
       return const [];
     }
 
-    final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento/filtrar')
-        .replace(queryParameters: <String, String>{
-      'nombre': normalizedQuery,
-    });
+    final uri = Uri.parse(
+      '${AppConstants.apiBaseUrl}/establecimiento/filtrar',
+    ).replace(queryParameters: <String, String>{'nombre': normalizedQuery});
 
     final response = await _client.get(
       uri,
@@ -108,8 +108,12 @@ class SearchService {
             latitud: double.tryParse(entry['latitud']?.toString() ?? ''),
             longitud: double.tryParse(entry['longitud']?.toString() ?? ''),
             estadoVerificado: entry['estado_verificado'] as bool?,
-            ultimaVerificacion: DateTime.tryParse(entry['ultima_verificacion']?.toString() ?? ''),
-            verificadorId: int.tryParse(entry['verificador_id']?.toString() ?? ''),
+            ultimaVerificacion: DateTime.tryParse(
+              entry['ultima_verificacion']?.toString() ?? '',
+            ),
+            verificadorId: int.tryParse(
+              entry['verificador_id']?.toString() ?? '',
+            ),
           );
         })
         .whereType<SearchRestaurantResult>()
@@ -121,11 +125,13 @@ class SearchService {
     required double radiusMeters,
   }) async {
     final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento/filtrar')
-        .replace(queryParameters: <String, String>{
-      'latitud': center.latitude.toString(),
-      'longitud': center.longitude.toString(),
-      'distancia_metros': radiusMeters.toStringAsFixed(0),
-    });
+        .replace(
+          queryParameters: <String, String>{
+            'latitud': center.latitude.toString(),
+            'longitud': center.longitude.toString(),
+            'distancia_metros': radiusMeters.toStringAsFixed(0),
+          },
+        );
 
     final response = await _client.get(
       uri,
@@ -159,8 +165,12 @@ class SearchService {
             latitud: double.tryParse(entry['latitud']?.toString() ?? ''),
             longitud: double.tryParse(entry['longitud']?.toString() ?? ''),
             estadoVerificado: entry['estado_verificado'] as bool?,
-            ultimaVerificacion: DateTime.tryParse(entry['ultima_verificacion']?.toString() ?? ''),
-            verificadorId: int.tryParse(entry['verificador_id']?.toString() ?? ''),
+            ultimaVerificacion: DateTime.tryParse(
+              entry['ultima_verificacion']?.toString() ?? '',
+            ),
+            verificadorId: int.tryParse(
+              entry['verificador_id']?.toString() ?? '',
+            ),
           );
         })
         .whereType<SearchRestaurantResult>()
