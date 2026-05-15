@@ -11,6 +11,7 @@ import '../widgets/app_search_bar.dart';
 import '../providers/search_provider.dart';
 import 'profile_screen.dart';
 import 'admin_screen.dart';
+import 'establishments_list_screen.dart';
 
 /// Pantalla principal después del login.
 /// Contiene el header y la barra de navegación inferior.
@@ -74,16 +75,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildContent() {
     switch (_currentIndex) {
       case 0:
-        // Índice 0: Búsqueda/Favoritos
-        return Container(
-          color: const Color(AppColors.background),
-          child: Center(
-            child: Text(
-              'Búsqueda y Favoritos',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-          ),
-        );
+        // Índice 0: Listado
+        return const EstablishmentsListScreen();
       case 1:
         // Índice 1: Mapa
         return Selector<
