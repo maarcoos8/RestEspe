@@ -125,6 +125,14 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                                   );
                                 }
                               });
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('"$newValue" ha sido actualizado'),
+                                    backgroundColor: const Color(AppColors.successGreen),
+                                  ),
+                                );
+                              }
                             } catch (e) {
                               _showErrorSnackBar(_formatApiError(e, 'Error al actualizar dieta'));
                             }
@@ -241,6 +249,14 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                                   );
                                 }
                               });
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('"$newValue" ha sido actualizado'),
+                                    backgroundColor: const Color(AppColors.successGreen),
+                                  ),
+                                );
+                              }
                             } catch (e) {
                               _showErrorSnackBar(_formatApiError(e, 'Error al actualizar tipo de establecimiento'));
                             }
@@ -545,12 +561,14 @@ class _AdminItemTile extends StatelessWidget {
               onPressed: () async {
                 try {
                   await onEdit!();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Elemento actualizado')));
-                  }
                 } catch (e) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error al editar')));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error al editar: $e'),
+                        backgroundColor: const Color(AppColors.errorRed),
+                      ),
+                    );
                   }
                 }
               },
