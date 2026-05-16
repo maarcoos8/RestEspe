@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/constants.dart';
+import '../core/role_constants.dart';
 import '../data/models/search_models.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/app_header.dart';
@@ -11,6 +12,8 @@ import '../widgets/app_search_bar.dart';
 import '../providers/search_provider.dart';
 import 'profile_screen.dart';
 import 'admin_screen.dart';
+import 'admin_establishments_screen.dart';
+import 'create_establishment_screen.dart';
 import 'establishments_list_screen.dart';
 
 /// Pantalla principal después del login.
@@ -26,6 +29,34 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late int _currentIndex = widget.initialIndex; // Índice inicial: Mapa
+
+  void _navigateToCreateEstablishment() {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const CreateEstablishmentScreen(),
+      ),
+    );
+  }
+
+  Widget? _getFloatingActionButton() {
+    final authProvider = context.read<AuthProvider>();
+    final roleId = authProvider.currentUser?.idRol;
+
+    // Mostrar botón flotante solo si está en la pestaña de administración
+    // y es administrador global
+    if (_currentIndex == 3 && roleId == RoleConstants.rolAdministradorGlobal) {
+      return FloatingActionButton(
+        onPressed: _navigateToCreateEstablishment,
+        backgroundColor: const Color(AppColors.primaryOrange),
+        child: const Icon(Icons.add, color: Colors.white),
+      );
+    }
+
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,12 +98,15 @@ class _HomeScreenState extends State<HomeScreen> {
               });
             },
           ),
+          floatingActionButton: _getFloatingActionButton(),
         );
       },
     );
   }
 
   Widget _buildContent() {
+    final authProvider = context.read<AuthProvider>();
+
     switch (_currentIndex) {
       case 0:
         // Índice 0: Listado
@@ -108,6 +142,13 @@ class _HomeScreenState extends State<HomeScreen> {
         return const ProfileScreen();
       case 3:
         // Índice 3: Administración (solo para roles != usuario)
+        // Si el usuario es `Administrador Global`, mostrar directamente
+        // la pantalla de administración de establecimientos embebida
+        final roleId = authProvider.currentUser?.idRol;
+        if (roleId == RoleConstants.rolAdministradorGlobal) {
+          return const AdminEstablishmentsScreen(embedInHome: true);
+        }
+
         return const AdminScreen();
       default:
         return Container(color: const Color(AppColors.background));

@@ -16,7 +16,15 @@ import 'restaurant_detail_screen.dart';
 ///
 /// Muestra listado paginado de 10 en 10 con filtro por nombre.
 class AdminEstablishmentsScreen extends StatefulWidget {
-  const AdminEstablishmentsScreen({super.key});
+  /// If true, the screen will render its content without wrapping it in
+  /// `ScaffoldWithNav`. This allows embedding the admin list inside
+  /// `HomeScreen` so the shared `AppHeader` remains visible.
+  const AdminEstablishmentsScreen({
+    super.key,
+    this.embedInHome = false,
+  });
+
+  final bool embedInHome;
 
   @override
   State<AdminEstablishmentsScreen> createState() =>
@@ -186,6 +194,116 @@ class _AdminEstablishmentsScreenState extends State<AdminEstablishmentsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final content = RefreshIndicator(
+      onRefresh: _loadFirstPage,
+      child: ListView(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.zero,
+        children: [
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: TextField(
+              controller: _filterController,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: 'Filtrar por nombre',
+                prefixIcon: const Icon(Icons.search_rounded),
+                filled: true,
+                fillColor: const Color(AppColors.white),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0x1A000000)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0x1A000000)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(
+                    color: Color(AppColors.primaryOrange),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (_isInitialLoading)
+            const Padding(
+              padding: EdgeInsets.only(top: 120),
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: Color(AppColors.primaryOrange),
+                ),
+              ),
+            )
+          else if (_errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 120),
+              child: Center(
+                child: Text(
+                  'Error al cargar establecimientos\n\n$_errorMessage',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+            )
+          else if (_establishments.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 120),
+              child: Center(
+                child: Text(
+                  _appliedFilter.isEmpty
+                      ? 'No hay establecimientos para mostrar.'
+                      : 'No hay resultados para ese filtro.',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              itemCount: _establishments.length + (_isLoadingMore ? 1 : 0),
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                if (index >= _establishments.length) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: Color(AppColors.primaryOrange),
+                      ),
+                    ),
+                  );
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: RestaurantCardWidget(
+                    restaurant: _establishments[index],
+                    compact: true,
+                    onCardTap: () => _openRestaurantDetail(_establishments[index]),
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+
+    // Si está embebida en HomeScreen, devolver solo el contenido
+    if (widget.embedInHome) {
+      return Container(
+        color: const Color(AppColors.background),
+        child: content,
+      );
+    }
+
+    // Si no está embebida, usar ScaffoldWithNav con header de atrás
     return ScaffoldWithNav(
       title: 'Administración de Establecimientos',
       currentIndex: 3,
@@ -194,108 +312,7 @@ class _AdminEstablishmentsScreenState extends State<AdminEstablishmentsScreen> {
         backgroundColor: const Color(AppColors.primaryOrange),
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      body: RefreshIndicator(
-        onRefresh: _loadFirstPage,
-        child: ListView(
-          controller: _scrollController,
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.zero,
-          children: [
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: TextField(
-                controller: _filterController,
-                textInputAction: TextInputAction.search,
-                decoration: InputDecoration(
-                  hintText: 'Filtrar por nombre',
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  filled: true,
-                  fillColor: const Color(AppColors.white),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0x1A000000)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0x1A000000)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: Color(AppColors.primaryOrange),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (_isInitialLoading)
-              const Padding(
-                padding: EdgeInsets.only(top: 120),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: Color(AppColors.primaryOrange),
-                  ),
-                ),
-              )
-            else if (_errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 120),
-                child: Center(
-                  child: Text(
-                    'Error al cargar establecimientos\n\n$_errorMessage',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                ),
-              )
-            else if (_establishments.isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 120),
-                child: Center(
-                  child: Text(
-                    _appliedFilter.isEmpty
-                        ? 'No hay establecimientos para mostrar.'
-                        : 'No hay resultados para ese filtro.',
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                ),
-              )
-            else
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                itemCount: _establishments.length + (_isLoadingMore ? 1 : 0),
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  if (index >= _establishments.length) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: Color(AppColors.primaryOrange),
-                        ),
-                      ),
-                    );
-                  }
-
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: RestaurantCardWidget(
-                      restaurant: _establishments[index],
-                      compact: true,
-                      onCardTap: () =>
-                          _openRestaurantDetail(_establishments[index]),
-                    ),
-                  );
-                },
-              ),
-          ],
-        ),
-      ),
+      body: content,
     );
   }
 }
