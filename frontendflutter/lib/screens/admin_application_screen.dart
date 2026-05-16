@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flex_color_picker/flex_color_picker.dart';
 
 import '../core/constants.dart';
 import '../widgets/scaffold_with_nav.dart';
@@ -103,6 +104,36 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                         return _AdminItemTile(
                           title: dieta.nombreDieta,
                           isLast: isLast,
+                          colorHex: dieta.colorHex,
+                          onColorChanged: (String newColor) async {
+                            try {
+                              await AdminService.updateCategoriaDieta(
+                                dieta.idCategoria,
+                                dieta.nombreDieta,
+                                colorHex: newColor,
+                              );
+                              setState(() {
+                                final index = _categoriasDieta!.indexWhere((d) => d.idCategoria == dieta.idCategoria);
+                                if (index != -1) {
+                                  _categoriasDieta![index] = CategoriaDieta(
+                                    idCategoria: dieta.idCategoria,
+                                    nombreDieta: dieta.nombreDieta,
+                                    colorHex: newColor,
+                                  );
+                                }
+                              });
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Color actualizado'),
+                                    backgroundColor: const Color(AppColors.successGreen),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              _showErrorSnackBar(_formatApiError(e, 'Error al actualizar color'));
+                            }
+                          },
                           onEdit: () async {
                             final newValue = await _showEditNameDialog(
                               context,
@@ -115,13 +146,18 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                             }
 
                             try {
-                              await AdminService.updateCategoriaDieta(dieta.idCategoria, newValue);
+                              await AdminService.updateCategoriaDieta(
+                                dieta.idCategoria,
+                                newValue,
+                                colorHex: dieta.colorHex,
+                              );
                               setState(() {
                                 final index = _categoriasDieta!.indexWhere((d) => d.idCategoria == dieta.idCategoria);
                                 if (index != -1) {
                                   _categoriasDieta![index] = CategoriaDieta(
                                     idCategoria: dieta.idCategoria,
                                     nombreDieta: newValue,
+                                    colorHex: dieta.colorHex,
                                   );
                                 }
                               });
@@ -516,13 +552,104 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
 }
 
 /// Widget para mostrar un elemento en la lista de administración.
-class _AdminItemTile extends StatelessWidget {
+class _AdminItemTile extends StatefulWidget {
   final String title;
   final bool isLast;
   final Future<void> Function()? onEdit;
   final Future<void> Function()? onDelete;
+  final String? colorHex;
+  final Future<void> Function(String)? onColorChanged;
 
-  const _AdminItemTile({required this.title, required this.isLast, this.onEdit, this.onDelete});
+  const _AdminItemTile({
+    required this.title,
+    required this.isLast,
+    this.onEdit,
+    this.onDelete,
+    this.colorHex,
+    this.onColorChanged,
+  });
+
+  @override
+  State<_AdminItemTile> createState() => _AdminItemTileState();
+}
+
+class _AdminItemTileState extends State<_AdminItemTile> {
+  Color _hexToColor(String hexString) {
+    String hex = hexString.replaceFirst('#', '');
+    // Si tiene 6 caracteres, agregar FF al inicio para opacidad completa
+    if (hex.length == 6) {
+      return Color(int.parse('ff$hex', radix: 16));
+    } else if (hex.length == 8) {
+      return Color(int.parse(hex, radix: 16));
+    }
+    // Color por defecto si el formato es inválido
+    return Color(int.parse('ffFF6B6B', radix: 16));
+  }
+
+  Future<void> _showColorPicker(BuildContext context) async {
+    Color screenPickerColor = _hexToColor(widget.colorHex!);
+
+    if (!context.mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(AppColors.white),
+          title: const Text('Selecciona un color'),
+          content: SingleChildScrollView(
+            child: ColorPicker(
+              color: screenPickerColor,
+              onColorChanged: (Color color) {
+                screenPickerColor = color;
+              },
+              width: 40,
+              height: 40,
+              spacing: 4,
+              runSpacing: 4,
+              borderRadius: 0,
+              wheelDiameter: 165,
+              heading: Text(
+                'Selecciona el tono',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              subheading: Text(
+                'Selecciona la intensidad',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final hexColor = '#${screenPickerColor.value.toRadixString(16).substring(2).toUpperCase()}';
+                Navigator.of(context).pop();
+                if (widget.onColorChanged != null) {
+                  try {
+                    await widget.onColorChanged!(hexColor);
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error al cambiar color: $e'),
+                          backgroundColor: const Color(AppColors.errorRed),
+                        ),
+                      );
+                    }
+                  }
+                }
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -531,7 +658,7 @@ class _AdminItemTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        border: isLast
+        border: widget.isLast
             ? null
             : const Border(
                 bottom: BorderSide(
@@ -548,19 +675,37 @@ class _AdminItemTile extends StatelessWidget {
             color: Color(AppColors.primaryOrange),
           ),
           const SizedBox(width: 12),
+          // Color square for diet categories
+          if (widget.colorHex != null)
+            GestureDetector(
+              onTap: widget.onColorChanged != null ? () => _showColorPicker(context) : null,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _hexToColor(widget.colorHex!),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(
+                    color: const Color(0x20000000),
+                    width: 1,
+                  ),
+                ),
+              ),
+            ),
+          if (widget.colorHex != null) const SizedBox(width: 12),
           Expanded(
             child: Text(
-              title,
+              widget.title,
               style: itemStyle,
             ),
           ),
-          if (onEdit != null)
+          if (widget.onEdit != null)
             IconButton(
               icon: const Icon(Icons.edit_outlined, color: Color(AppColors.primaryBlue)),
               tooltip: 'Editar',
               onPressed: () async {
                 try {
-                  await onEdit!();
+                  await widget.onEdit!();
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -573,7 +718,7 @@ class _AdminItemTile extends StatelessWidget {
                 }
               },
             ),
-          if (onDelete != null)
+          if (widget.onDelete != null)
             IconButton(
               icon: const Icon(Icons.delete_outline_rounded, color: Color(AppColors.errorRed)),
               tooltip: 'Eliminar',
@@ -590,7 +735,7 @@ class _AdminItemTile extends StatelessWidget {
                           ),
                     ),
                     content: Text(
-                      '¿Estás seguro de que quieres eliminar "$title"? Esta acción no se puede deshacer.',
+                      '¿Estás seguro de que quieres eliminar "${widget.title}"? Esta acción no se puede deshacer.',
                       style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
                             color: const Color(AppColors.darkText),
                           ),
@@ -611,12 +756,12 @@ class _AdminItemTile extends StatelessWidget {
                         ),
                         onPressed: () async {
                           try {
-                            await onDelete!();
+                            await widget.onDelete!();
                             Navigator.of(ctx).pop();
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('"$title" ha sido eliminado'),
+                                  content: Text('"${widget.title}" ha sido eliminado'),
                                   backgroundColor: const Color(AppColors.successGreen),
                                 ),
                               );

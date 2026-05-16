@@ -142,12 +142,16 @@ class AdminService {
   }
 
   /// Crea una nueva categoría de dieta.
-  static Future<void> createCategoriaDieta(String nombreDieta) async {
+  static Future<void> createCategoriaDieta(String nombreDieta, {String? colorHex}) async {
     final uri = Uri.parse('${AppConstants.apiBaseUrl}/categoria_dieta/');
+    final body = {'nombre_dieta': nombreDieta};
+    if (colorHex != null) {
+      body['color_hex'] = colorHex;
+    }
     final response = await http.post(
       uri,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'nombre_dieta': nombreDieta}),
+      body: jsonEncode(body),
     );
     if (response.statusCode != 201) {
       throw Exception(_extractErrorMessage(response, 'Error al crear categoría de dieta'));
@@ -164,12 +168,16 @@ class AdminService {
   }
 
   /// Actualiza una categoría de dieta.
-  static Future<void> updateCategoriaDieta(int id, String nombreDieta) async {
+  static Future<void> updateCategoriaDieta(int id, String nombreDieta, {String? colorHex}) async {
     final uri = Uri.parse('${AppConstants.apiBaseUrl}/categoria_dieta/$id');
+    final body = {'nombre_dieta': nombreDieta};
+    if (colorHex != null) {
+      body['color_hex'] = colorHex;
+    }
     final response = await http.put(
       uri,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'nombre_dieta': nombreDieta}),
+      body: jsonEncode(body),
     );
     if (response.statusCode != 200) {
       throw Exception(_extractErrorMessage(response, 'Error al actualizar categoría de dieta'));

@@ -18,3 +18,8 @@ class EstablecimientoCategoria(Base):
     def nombre_dieta(self):
         """Expone el nombre de la categoría de dieta"""
         return self.categoria.nombre_dieta if self.categoria else None
+
+    @hybrid_property
+    def color_hex(self):
+        """Expone el color hex de la categoría de dieta"""
+        return self.categoria.color_hex if self.categoria else '#FF6B6B'

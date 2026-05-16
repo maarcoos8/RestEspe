@@ -7,3 +7,4 @@ class CategoriaDieta(Base):
 
     id_categoria = Column(Integer, primary_key=True, index=True)
     nombre_dieta = Column(String(150), unique=True, nullable=False)
+    color_hex = Column(String(7), default='#FF6B6B', nullable=False)

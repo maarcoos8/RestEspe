@@ -36,15 +36,18 @@ class DietaCategory {
   const DietaCategory({
     required this.idCategoria,
     required this.nombreDieta,
+    required this.colorHex,
   });
 
   final int idCategoria;
   final String nombreDieta;
+  final String colorHex;
 
   factory DietaCategory.fromJson(Map<String, dynamic> json) {
     return DietaCategory(
       idCategoria: json['id_categoria'] as int,
       nombreDieta: json['nombre_dieta'] as String,
+      colorHex: json['color_hex'] as String? ?? '#FF6B6B',
     );
   }
 }

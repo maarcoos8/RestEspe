@@ -1,10 +1,25 @@
 from typing import List, Optional
+import random
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.categoria_dieta import CategoriaDieta
 from app.schemas.categoria_dieta import CategoriaDietaCreate, CategoriaDietaUpdate
+
+# Paleta de colores agradables para las categorías de dieta
+DIET_COLORS = [
+    '#FF6B6B',  # Rojo coral
+    '#4ECDC4',  # Turquesa
+    '#45B7D1',  # Azul cielo
+    '#FFA07A',  # Salmón
+    '#98D8C8',  # Menta
+    '#F7DC6F',  # Amarillo dorado
+    '#BB8FCE',  # Púrpura
+    '#85C1E2',  # Azul claro
+    '#F8B195',  # Melocotón
+    '#A6D5BA',  # Verde salvia
+]
 
 
 def get_categoria(db: Session, id_categoria: int) -> Optional[CategoriaDieta]:
@@ -20,6 +35,10 @@ def create_categoria(db: Session, cat_in: CategoriaDietaCreate) -> CategoriaDiet
     existing = db.query(CategoriaDieta).filter(CategoriaDieta.nombre_dieta == data["nombre_dieta"]).first()
     if existing:
         raise ValueError("Ya existe una dieta con ese nombre")
+
+    # Generar color random si no se proporciona
+    if "color_hex" not in data or data["color_hex"] is None:
+        data["color_hex"] = random.choice(DIET_COLORS)
 
     db_obj = CategoriaDieta(**data)
     db.add(db_obj)

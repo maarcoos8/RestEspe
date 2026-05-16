@@ -22,6 +22,18 @@ class RestaurantDetailScreen extends StatelessWidget {
   final RestaurantDetail restaurant;
   final Position? currentLocation;
 
+  Color _hexToColor(String hexString) {
+    String hex = hexString.replaceFirst('#', '');
+    // Si tiene 6 caracteres, agregar FF al inicio para opacidad completa
+    if (hex.length == 6) {
+      return Color(int.parse('ff$hex', radix: 16));
+    } else if (hex.length == 8) {
+      return Color(int.parse(hex, radix: 16));
+    }
+    // Color por defecto si el formato es inválido
+    return Color(int.parse('ffFF6B6B', radix: 16));
+  }
+
   double? _calculateDistance() {
     if (currentLocation == null || restaurant.coordinates == null) {
       return null;
@@ -199,9 +211,8 @@ class RestaurantDetailScreen extends StatelessWidget {
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(
-                                        AppColors.primaryOrange,
-                                      ).withValues(alpha: 0.1),
+                                      color: _hexToColor(cat.colorHex)
+                                          .withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: Text(
@@ -210,9 +221,7 @@ class RestaurantDetailScreen extends StatelessWidget {
                                           .textTheme
                                           .labelSmall
                                           ?.copyWith(
-                                            color: const Color(
-                                              AppColors.primaryOrange,
-                                            ),
+                                            color: _hexToColor(cat.colorHex),
                                             fontWeight: FontWeight.w600,
                                           ),
                                     ),
