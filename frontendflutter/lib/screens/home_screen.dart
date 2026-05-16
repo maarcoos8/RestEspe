@@ -144,9 +144,14 @@ class _HomeScreenState extends State<HomeScreen> {
         // Índice 3: Administración (solo para roles != usuario)
         // Si el usuario es `Administrador Global`, mostrar directamente
         // la pantalla de administración de establecimientos embebida
+        // Si el usuario es `Propietario`, mostrar sus establecimientos filtrando por su ID
         final roleId = authProvider.currentUser?.idRol;
+        final userId = authProvider.currentUser?.idUsuario;
+        
         if (roleId == RoleConstants.rolAdministradorGlobal) {
           return const AdminEstablishmentsScreen(embedInHome: true);
+        } else if (roleId == RoleConstants.rolPropietario && userId != null) {
+          return AdminEstablishmentsScreen(embedInHome: true, propietarioId: userId);
         }
 
         return const AdminScreen();

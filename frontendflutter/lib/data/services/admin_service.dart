@@ -37,15 +37,16 @@ class AdminService {
     }
   }
 
-  /// Busca usuarios por nombre o email.
+  /// Busca usuarios por nombre o email, filtrando solo propietarios.
   static Future<List<AdminUserModel>> searchUsuarios(String query) async {
     if (query.isEmpty) return [];
     try {
       final usuarios = await getUsuarios();
       final lowerQuery = query.toLowerCase();
       return usuarios
-          .where((u) => (u.nombreCompleto?.toLowerCase().contains(lowerQuery) ?? false) ||
-                        (u.email.toLowerCase().contains(lowerQuery)))
+          .where((u) => u.idRol == 2 && // rolPropietario = 2
+                        ((u.nombreCompleto?.toLowerCase().contains(lowerQuery) ?? false) ||
+                         (u.email.toLowerCase().contains(lowerQuery))))
           .toList();
     } catch (e) {
       throw Exception('Error al buscar usuarios: $e');
@@ -129,6 +130,7 @@ class AdminService {
     int skip = 0,
     int limit = 10,
     String? nombre,
+    int? propietarioId,
   }) async {
     try {
       final queryParameters = <String, String>{
@@ -137,6 +139,9 @@ class AdminService {
       };
       if (nombre != null && nombre.trim().isNotEmpty) {
         queryParameters['nombre'] = nombre.trim();
+      }
+      if (propietarioId != null) {
+        queryParameters['propietario_id'] = propietarioId.toString();
       }
 
       final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento/filtrar')

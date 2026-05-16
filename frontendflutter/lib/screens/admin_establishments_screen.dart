@@ -12,9 +12,10 @@ import '../widgets/scaffold_with_nav.dart';
 import 'create_establishment_screen.dart';
 import 'restaurant_detail_screen.dart';
 
-/// Pantalla de administración de establecimientos (superadmin).
+/// Pantalla de administración de establecimientos (superadmin o propietario).
 ///
 /// Muestra listado paginado de 10 en 10 con filtro por nombre.
+/// Si se pasa [propietarioId], solo mostrará establecimientos del propietario.
 class AdminEstablishmentsScreen extends StatefulWidget {
   /// If true, the screen will render its content without wrapping it in
   /// `ScaffoldWithNav`. This allows embedding the admin list inside
@@ -22,9 +23,11 @@ class AdminEstablishmentsScreen extends StatefulWidget {
   const AdminEstablishmentsScreen({
     super.key,
     this.embedInHome = false,
+    this.propietarioId,
   });
 
   final bool embedInHome;
+  final int? propietarioId;
 
   @override
   State<AdminEstablishmentsScreen> createState() =>
@@ -103,6 +106,7 @@ class _AdminEstablishmentsScreenState extends State<AdminEstablishmentsScreen> {
         skip: 0,
         limit: _pageSize,
         nombre: _appliedFilter,
+        propietarioId: widget.propietarioId,
       );
       final details = await _loadRestaurantDetails(items);
       if (!mounted) return;
@@ -133,6 +137,7 @@ class _AdminEstablishmentsScreenState extends State<AdminEstablishmentsScreen> {
         skip: _skip,
         limit: _pageSize,
         nombre: _appliedFilter,
+        propietarioId: widget.propietarioId,
       );
       final details = await _loadRestaurantDetails(items);
       if (!mounted) return;
@@ -295,11 +300,16 @@ class _AdminEstablishmentsScreenState extends State<AdminEstablishmentsScreen> {
       ),
     );
 
-    // Si está embebida en HomeScreen, devolver solo el contenido
+    // Si está embebida en HomeScreen
     if (widget.embedInHome) {
-      return Container(
-        color: const Color(AppColors.background),
-        child: content,
+      return Scaffold(
+        backgroundColor: const Color(AppColors.background),
+        body: content,
+        floatingActionButton: FloatingActionButton(
+          onPressed: _navigateToCreateEstablishment,
+          backgroundColor: const Color(AppColors.primaryOrange),
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
       );
     }
 

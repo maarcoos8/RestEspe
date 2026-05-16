@@ -14,6 +14,7 @@ class EstablecimientoFiltroOut(BaseModel):
     estado_verificado: Optional[bool] = False
     ultima_verificacion: Optional[datetime] = None
     verificador_id: Optional[int] = None
+    propietario_id: Optional[int] = None
     puntuacion_media: Optional[float] = None
 
     model_config = ConfigDict(from_attributes=True)

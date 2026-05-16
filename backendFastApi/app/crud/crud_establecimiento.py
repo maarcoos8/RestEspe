@@ -33,6 +33,7 @@ def _base_establecimiento_filtrado_query(db: Session):
             Establecimiento.estado_verificado.label("estado_verificado"),
             Establecimiento.ultima_verificacion.label("ultima_verificacion"),
             Establecimiento.verificador_id.label("verificador_id"),
+            Establecimiento.propietario_id.label("propietario_id"),
             puntuacion_media_subq.c.puntuacion_media.label("puntuacion_media"),
         )
         .outerjoin(
@@ -74,6 +75,7 @@ def get_establecimientos_filtrados(
     tipos_establecimiento_ids: Optional[List[int]] = None,
     nombre: Optional[str] = None,
     categorias_dieta_ids: Optional[List[int]] = None,
+    propietario_id: Optional[int] = None,
     skip: int = 0,
     limit: int = 100,
 ):
@@ -81,6 +83,9 @@ def get_establecimientos_filtrados(
 
     if nombre:
         query = query.filter(Establecimiento.nombre.ilike(f"%{nombre}%"))
+
+    if propietario_id is not None:
+        query = query.filter(Establecimiento.propietario_id == propietario_id)
 
     if latitud is not None and longitud is not None and distancia_metros is not None:
         punto = func.ST_SetSRID(func.ST_MakePoint(longitud, latitud), 4326)
@@ -114,12 +119,13 @@ def get_establecimientos_filtrados(
                 "id_establecimiento": row.id_establecimiento,
                 "nombre": row.nombre,
                 "direccion_texto": row.direccion_texto,
-                    "imagen_url": row.imagen_url,
+                "imagen_url": row.imagen_url,
                 "latitud": float(row.latitud) if row.latitud is not None else None,
                 "longitud": float(row.longitud) if row.longitud is not None else None,
                 "estado_verificado": row.estado_verificado,
                 "ultima_verificacion": row.ultima_verificacion,
                 "verificador_id": row.verificador_id,
+                "propietario_id": row.propietario_id,
                 "puntuacion_media": float(row.puntuacion_media) if row.puntuacion_media is not None else None,
             }
         )

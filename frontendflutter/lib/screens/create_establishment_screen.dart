@@ -5,14 +5,17 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:provider/provider.dart';
 
 import '../core/constants.dart';
+import '../core/role_constants.dart';
 import '../data/models/admin_user_model.dart';
 import '../data/models/create_establishment_form.dart';
 import '../data/models/tipo_establecimiento_model.dart';
 import '../data/services/admin_service.dart';
 import '../data/services/image_upload_service.dart';
 import '../data/services/geocoding_service.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/scaffold_with_nav.dart';
 
 /// Pantalla para crear un nuevo establecimiento.
@@ -69,6 +72,32 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
     _loadTiposEstablecimiento();
     _direccionController.addListener(_onDireccionChanged);
     _propietarioSearchController.addListener(_onPropietarioSearchChanged);
+    
+    // Si el usuario es propietario, pre-llenar el campo de propietario
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializePropietarioIfOwner();
+    });
+  }
+
+  /// Si el usuario actual es propietario, pre-llena el campo de propietario con él mismo
+  void _initializePropietarioIfOwner() {
+    final authProvider = context.read<AuthProvider>();
+    final user = authProvider.currentUser;
+    
+    if (user != null && user.idRol == RoleConstants.rolPropietario) {
+      setState(() {
+        _selectedPropietario = AdminUserModel(
+          idUsuario: user.idUsuario,
+          email: user.email,
+          nombreCompleto: user.nombreCompleto,
+          fotoPerfil: user.fotoPerfil,
+          idRol: user.idRol,
+        );
+        _propietarioSearchController.text = '${user.nombreCompleto ?? user.email} (Tú)';
+        _formData.propietarioId = user.idUsuario;
+        _showPropietarioSuggestions = false;
+      });
+    }
   }
 
   @override
@@ -400,6 +429,36 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
     });
   }
 
+  /// Muestra un diálogo de confirmación antes de salir.
+  void _showExitConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Descartar cambios?'),
+        content: const Text('Si sales ahora, los datos que has introducido no se guardarán.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Continuar editando',
+              style: TextStyle(color: Color(AppColors.primaryOrange)),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Cerrar el diálogo
+              Navigator.pop(context, false); // Salir de la pantalla de creación
+            },
+            child: const Text(
+              'Descartar',
+              style: TextStyle(color: Color(AppColors.errorRed)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Crea el establecimiento en el backend.
   Future<void> _createEstablishment() async {
     if (!_formKey.currentState!.validate()) {
@@ -445,40 +504,46 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ScaffoldWithNav(
-      title: 'Crear Establecimiento',
-      currentIndex: 3,
-      body: _isLoadingTipos
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(AppColors.primaryOrange)),
-            )
-          : SingleChildScrollView(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Error message
-                    if (_errorMessage != null)
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          color: const Color(AppColors.errorRed).withOpacity(0.1),
-                          border: const Border(
-                            left: BorderSide(color: Color(AppColors.errorRed), width: 3),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _showExitConfirmation();
+      },
+      child: ScaffoldWithNav(
+        title: 'Crear Establecimiento',
+        currentIndex: 3,
+        body: _isLoadingTipos
+            ? const Center(
+                child: CircularProgressIndicator(color: Color(AppColors.primaryOrange)),
+              )
+            : SingleChildScrollView(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Error message
+                      if (_errorMessage != null)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(AppColors.errorRed).withOpacity(0.1),
+                            border: const Border(
+                              left: BorderSide(color: Color(AppColors.errorRed), width: 3),
+                            ),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          borderRadius: BorderRadius.circular(8),
+                          child: Text(
+                            _errorMessage!,
+                            style: const TextStyle(color: Color(AppColors.errorRed)),
+                          ),
                         ),
-                        child: Text(
-                          _errorMessage!,
-                          style: const TextStyle(color: Color(AppColors.errorRed)),
-                        ),
-                      ),
 
-                    // Sección: Nombre
+                      // Sección: Nombre
                     Text(
                       'Nombre del Establecimiento',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -879,92 +944,105 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                       ),
                     const SizedBox(height: 24),
 
-                    // Sección: Propietario (opcional)
-                    Text(
-                      'Propietario del Establecimiento (Opcional)',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _propietarioSearchController,
-                      decoration: InputDecoration(
-                        hintText: 'Busca por nombre o email...',
-                        hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: const Color(0xFF9E9E9E),
+                    // Sección: Propietario
+                    Builder(
+                      builder: (context) {
+                        final authProvider = context.read<AuthProvider>();
+                        final isOwner = authProvider.currentUser?.idRol == RoleConstants.rolPropietario;
+                        
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Propietario del Establecimiento${isOwner ? '' : ' (Opcional)'}',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                             ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        filled: true,
-                        fillColor: const Color(AppColors.white),
-                        suffixIcon: _selectedPropietario != null
-                            ? IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  setState(() {
-                                    _selectedPropietario = null;
-                                    _propietarioSearchController.clear();
-                                    _formData.propietarioId = null;
-                                    _usuariosFiltrados.clear();
-                                    _showPropietarioSuggestions = false;
-                                  });
-                                },
-                              )
-                            : (_isSearchingPropietarios
-                                ? const SizedBox(
-                                    width: 40,
-                                    child: Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _propietarioSearchController,
+                              enabled: !isOwner, // Read-only si es propietario
+                              decoration: InputDecoration(
+                                hintText: 'Busca por nombre o email...',
+                                hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: const Color(0xFF9E9E9E),
+                                    ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                filled: true,
+                                fillColor: const Color(AppColors.white),
+                                suffixIcon: _selectedPropietario != null && !isOwner
+                                    ? IconButton(
+                                        icon: const Icon(Icons.clear),
+                                        onPressed: () {
+                                          setState(() {
+                                            _selectedPropietario = null;
+                                            _propietarioSearchController.clear();
+                                            _formData.propietarioId = null;
+                                            _usuariosFiltrados.clear();
+                                            _showPropietarioSuggestions = false;
+                                          });
+                                        },
+                                      )
+                                    : (_isSearchingPropietarios
+                                        ? const SizedBox(
+                                            width: 40,
+                                            child: Padding(
+                                              padding: EdgeInsets.all(8.0),
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            ),
+                                          )
+                                        : null),
+                              ),
+                            ),
+                            // Sugerencias de usuarios
+                            if (_showPropietarioSuggestions && _usuariosFiltrados.isNotEmpty && !isOwner)
+                              Container(
+                                margin: const EdgeInsets.only(top: 8),
+                                decoration: BoxDecoration(
+                                  color: const Color(AppColors.white),
+                                  border: Border.all(
+                                    color: const Color(0x1A000000),
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: _usuariosFiltrados.length,
+                                  itemBuilder: (context, index) {
+                                    final usuario = _usuariosFiltrados[index];
+                                    return ListTile(
+                                      dense: true,
+                                      leading: const Icon(Icons.person_outlined, size: 18),
+                                      title: Text(
+                                        usuario.nombreCompleto ?? usuario.email,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context).textTheme.bodySmall,
                                       ),
-                                    ),
-                                  )
-                                : null),
-                      ),
+                                      subtitle: Text(
+                                        usuario.email,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              color: const Color(0xFF757575),
+                                              fontSize: 11,
+                                            ),
+                                      ),
+                                      onTap: () => _selectPropietario(usuario),
+                                    );
+                                  },
+                                ),
+                              ),
+                          ],
+                        );
+                      },
                     ),
-                    // Sugerencias de usuarios
-                    if (_showPropietarioSuggestions && _usuariosFiltrados.isNotEmpty)
-                      Container(
-                        margin: const EdgeInsets.only(top: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(AppColors.white),
-                          border: Border.all(
-                            color: const Color(0x1A000000),
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _usuariosFiltrados.length,
-                          itemBuilder: (context, index) {
-                            final usuario = _usuariosFiltrados[index];
-                            return ListTile(
-                              dense: true,
-                              leading: const Icon(Icons.person_outlined, size: 18),
-                              title: Text(
-                                usuario.nombreCompleto ?? usuario.email,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                              subtitle: Text(
-                                usuario.email,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: const Color(0xFF757575),
-                                      fontSize: 11,
-                                    ),
-                              ),
-                              onTap: () => _selectPropietario(usuario),
-                            );
-                          },
-                        ),
-                      ),
                     const SizedBox(height: 24),
 
                     // Nota importante
@@ -991,9 +1069,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                       children: [
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: _isCreating
-                                ? null
-                                : () => Navigator.pop(context, false),
+                            onPressed: _isCreating ? null : _showExitConfirmation,
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               side: const BorderSide(color: Color(AppColors.primaryOrange)),
@@ -1032,6 +1108,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                 ),
               ),
             ),
+      ),
     );
   }
 }

@@ -26,6 +26,7 @@ def filtrar_establecimientos(
     tipo_establecimiento_ids: Optional[List[int]] = Query(default=None),
     nombre: Optional[str] = Query(default=None),
     categoria_dieta_ids: Optional[List[int]] = Query(default=None),
+    propietario_id: Optional[int] = Query(default=None),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=10, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -38,6 +39,7 @@ def filtrar_establecimientos(
         tipos_establecimiento_ids=tipo_establecimiento_ids,
         nombre=nombre,
         categorias_dieta_ids=categoria_dieta_ids,
+        propietario_id=propietario_id,
         skip=skip,
         limit=limit,
     )
