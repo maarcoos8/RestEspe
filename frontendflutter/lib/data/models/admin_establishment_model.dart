@@ -9,6 +9,7 @@ class AdminEstablishmentModel {
   final bool estadoVerificado;
   final DateTime? ultimaVerificacion;
   final int? verificadorId;
+  final int? propietarioId;
   final double? puntuacionMedia;
 
   AdminEstablishmentModel({
@@ -22,6 +23,7 @@ class AdminEstablishmentModel {
     required this.ultimaVerificacion,
     required this.verificadorId,
     required this.puntuacionMedia,
+    this.propietarioId,
   });
 
   factory AdminEstablishmentModel.fromJson(Map<String, dynamic> json) {
@@ -37,6 +39,7 @@ class AdminEstablishmentModel {
           ? DateTime.tryParse(json['ultima_verificacion'] as String)
           : null,
       verificadorId: json['verificador_id'] as int?,
+      propietarioId: json['propietario_id'] as int?,
       puntuacionMedia: (json['puntuacion_media'] as num?)?.toDouble(),
     );
   }

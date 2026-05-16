@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
 
 import '../core/constants.dart';
+import '../data/models/admin_user_model.dart';
 import '../data/models/create_establishment_form.dart';
 import '../data/models/tipo_establecimiento_model.dart';
 import '../data/services/admin_service.dart';
@@ -34,6 +35,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
   final _direccionController = TextEditingController();
   final _latitudController = TextEditingController();
   final _longitudController = TextEditingController();
+  final _propietarioSearchController = TextEditingController();
   late MapController _mapController;
 
   final CreateEstablishmentForm _formData = CreateEstablishmentForm(
@@ -46,11 +48,16 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
   bool _isLoadingTipos = true;
   bool _isCreating = false;
   bool _isSearchingLocation = false;
+  bool _isSearchingPropietarios = false;
   Timer? _searchDebounceTimer;
+  Timer? _propietarioSearchTimer;
 
   List<TipoEstablecimiento> _tiposDisponibles = [];
   List<LocationSuggestion> _locationSuggestions = [];
+  List<AdminUserModel> _usuariosFiltrados = [];
   Set<int> _tiposSeleccionados = {};
+  AdminUserModel? _selectedPropietario;
+  bool _showPropietarioSuggestions = false;
 
   LatLng _mapCenter = const LatLng(40.4168, -3.7038); // Madrid por defecto
   String? _errorMessage;
@@ -61,16 +68,19 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
     _mapController = MapController();
     _loadTiposEstablecimiento();
     _direccionController.addListener(_onDireccionChanged);
+    _propietarioSearchController.addListener(_onPropietarioSearchChanged);
   }
 
   @override
   void dispose() {
     _searchDebounceTimer?.cancel();
+    _propietarioSearchTimer?.cancel();
     _scrollController.dispose();
     _nombreController.dispose();
     _direccionController.dispose();
     _latitudController.dispose();
     _longitudController.dispose();
+    _propietarioSearchController.dispose();
     _mapController.dispose();
     super.dispose();
   }
@@ -342,6 +352,51 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
     setState(() {
       _selectedImage = null;
       _formData.imagenUrl = null;
+    });
+  }
+
+  /// Maneja cambios en el campo de búsqueda de propietario con debounce
+  void _onPropietarioSearchChanged() {
+    _propietarioSearchTimer?.cancel();
+    final query = _propietarioSearchController.text.trim();
+
+    setState(() {
+      _showPropietarioSuggestions = query.isNotEmpty;
+      if (query.isEmpty) {
+        _usuariosFiltrados.clear();
+        _selectedPropietario = null;
+      }
+    });
+
+    if (query.isEmpty) return;
+
+    setState(() => _isSearchingPropietarios = true);
+
+    _propietarioSearchTimer = Timer(const Duration(milliseconds: 500), () async {
+      try {
+        final usuarios = await AdminService.searchUsuarios(query);
+        if (mounted) {
+          setState(() {
+            _usuariosFiltrados = usuarios;
+            _isSearchingPropietarios = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isSearchingPropietarios = false);
+        }
+      }
+    });
+  }
+
+  /// Selecciona un usuario como propietario
+  void _selectPropietario(AdminUserModel usuario) {
+    setState(() {
+      _selectedPropietario = usuario;
+      _propietarioSearchController.text = usuario.nombreCompleto ?? usuario.email;
+      _showPropietarioSuggestions = false;
+      _usuariosFiltrados.clear();
+      _formData.propietarioId = usuario.idUsuario;
     });
   }
 
@@ -821,6 +876,94 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                             showCheckmark: true,
                           );
                         }).toList(),
+                      ),
+                    const SizedBox(height: 24),
+
+                    // Sección: Propietario (opcional)
+                    Text(
+                      'Propietario del Establecimiento (Opcional)',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _propietarioSearchController,
+                      decoration: InputDecoration(
+                        hintText: 'Busca por nombre o email...',
+                        hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: const Color(0xFF9E9E9E),
+                            ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        filled: true,
+                        fillColor: const Color(AppColors.white),
+                        suffixIcon: _selectedPropietario != null
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedPropietario = null;
+                                    _propietarioSearchController.clear();
+                                    _formData.propietarioId = null;
+                                    _usuariosFiltrados.clear();
+                                    _showPropietarioSuggestions = false;
+                                  });
+                                },
+                              )
+                            : (_isSearchingPropietarios
+                                ? const SizedBox(
+                                    width: 40,
+                                    child: Padding(
+                                      padding: EdgeInsets.all(8.0),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  )
+                                : null),
+                      ),
+                    ),
+                    // Sugerencias de usuarios
+                    if (_showPropietarioSuggestions && _usuariosFiltrados.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(AppColors.white),
+                          border: Border.all(
+                            color: const Color(0x1A000000),
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _usuariosFiltrados.length,
+                          itemBuilder: (context, index) {
+                            final usuario = _usuariosFiltrados[index];
+                            return ListTile(
+                              dense: true,
+                              leading: const Icon(Icons.person_outlined, size: 18),
+                              title: Text(
+                                usuario.nombreCompleto ?? usuario.email,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              subtitle: Text(
+                                usuario.email,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: const Color(0xFF757575),
+                                      fontSize: 11,
+                                    ),
+                              ),
+                              onTap: () => _selectPropietario(usuario),
+                            );
+                          },
+                        ),
                       ),
                     const SizedBox(height: 24),
 

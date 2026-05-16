@@ -37,6 +37,21 @@ class AdminService {
     }
   }
 
+  /// Busca usuarios por nombre o email.
+  static Future<List<AdminUserModel>> searchUsuarios(String query) async {
+    if (query.isEmpty) return [];
+    try {
+      final usuarios = await getUsuarios();
+      final lowerQuery = query.toLowerCase();
+      return usuarios
+          .where((u) => (u.nombreCompleto?.toLowerCase().contains(lowerQuery) ?? false) ||
+                        (u.email.toLowerCase().contains(lowerQuery)))
+          .toList();
+    } catch (e) {
+      throw Exception('Error al buscar usuarios: $e');
+    }
+  }
+
   /// Obtiene la lista de roles.
   static Future<List<RolModel>> getRoles() async {
     try {

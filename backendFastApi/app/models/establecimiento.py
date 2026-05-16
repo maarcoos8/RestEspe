@@ -16,6 +16,7 @@ class Establecimiento(Base):
 	estado_verificado = Column(Boolean, default=False, nullable=False)
 	ultima_verificacion = Column(DateTime(timezone=True), nullable=True)
 	verificador_id = Column(Integer, ForeignKey("usuarios.id_usuario"), nullable=True)
+	propietario_id = Column(Integer, ForeignKey("usuarios.id_usuario"), nullable=True)
 
 
 	@hybrid_property
