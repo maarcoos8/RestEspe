@@ -5,6 +5,7 @@ import '../core/role_constants.dart';
 import '../data/models/restaurant_detail_model.dart';
 import '../data/services/admin_service.dart';
 import '../providers/auth_provider.dart';
+import '../screens/create_establishment_screen.dart';
 
 /// Widget que muestra los botones de acción para un establecimiento.
 /// Incluye botones para editar, borrar y verificar.
@@ -30,6 +31,23 @@ class EstablishmentActionsButtons extends StatefulWidget {
 class _EstablishmentActionsButtonsState
     extends State<EstablishmentActionsButtons> {
   bool _isDeleting = false;
+
+  void _onEdit() {
+    // Extraer los IDs de tipos de establecimiento
+    final tiposIds = widget.restaurant.tiposEstablecimiento
+        .map((tipo) => tipo.idTipo)
+        .toList();
+
+    // Navegar a la pantalla de edición
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => CreateEstablishmentScreen(
+          restaurantToEdit: widget.restaurant,
+          tiposEstablecimientoIds: tiposIds,
+        ),
+      ),
+    );
+  }
 
   void _showDeleteConfirmationDialog() {
     showDialog(
@@ -149,7 +167,7 @@ class _EstablishmentActionsButtonsState
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: widget.onEdit,
+                  onTap: _onEdit,
                   borderRadius: BorderRadius.circular(14),
                   child: const Icon(
                     Icons.edit_outlined,

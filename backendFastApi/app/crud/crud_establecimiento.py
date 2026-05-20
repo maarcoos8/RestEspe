@@ -159,6 +159,13 @@ def create_establecimiento(
 def update_establecimiento(
     db: Session, db_obj: Establecimiento, establecimiento_in: EstablecimientoUpdate
 ) -> Establecimiento:
+    """
+    Actualiza un establecimiento y maneja sus tipos y categorías.
+    
+    - Actualiza los campos básicos del establecimiento
+    - Si se incluyen tipos, actualiza solo los que han cambiado
+    - Si se incluyen categorías, actualiza solo las que han cambiado
+    """
     data = establecimiento_in.model_dump(exclude_unset=True)
     lat = data.pop("latitud", None)
     lon = data.pop("longitud", None)

@@ -289,6 +289,66 @@ class AdminService {
     }
   }
 
+  /// Actualiza un establecimiento existente.
+  static Future<void> updateEstablishment(
+    int idEstablecimiento,
+    dynamic formData,
+    List<int> tiposEstablecimientoIds,
+  ) async {
+    final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento/$idEstablecimiento');
+    
+    // formData debe tener método toJson() que devuelva Map<String, dynamic>
+    final body = formData is Map<String, dynamic> 
+        ? formData 
+        : (formData.toJson() as Map<String, dynamic>);
+    // Incluir tipos en el body para que el backend haga la actualización atómica
+    body['tipos_establecimiento_ids'] = tiposEstablecimientoIds;
+
+    final response = await http.put(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        _extractErrorMessage(response, 'Error al actualizar establecimiento (${response.statusCode})'),
+      );
+    }
+  }
+
+  /// Elimina todos los tipos de un establecimiento.
+  static Future<void> deleteAllEstablecimientoTipos(int idEstablecimiento) async {
+    try {
+      final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento_tipo/establecimiento/$idEstablecimiento');
+      final response = await http.get(uri);
+      
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
+        
+        for (final tipoJson in jsonList) {
+          final tipo = tipoJson as Map<String, dynamic>;
+          final idTipo = tipo['id_tipo_establecimiento'] as int;
+          await _deleteEstablecimientoTipo(idEstablecimiento, idTipo);
+        }
+      }
+    } catch (e) {
+      // Log silencioso - si hay error al eliminar, continuamos
+      print('Error eliminando tipos: $e');
+    }
+  }
+
+  /// Elimina un tipo específico de establecimiento.
+  static Future<void> _deleteEstablecimientoTipo(int idEstablecimiento, int idTipo) async {
+    final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento_tipo/establecimiento/$idEstablecimiento/tipo/$idTipo');
+    final response = await http.delete(uri);
+    if (response.statusCode != 200) {
+      throw Exception(
+        _extractErrorMessage(response, 'Error al eliminar tipo de establecimiento'),
+      );
+    }
+  }
+
   /// Crea una relación entre un establecimiento y un tipo.
   static Future<void> createEstablecimientoTipo(int idEstablecimiento, int idTipo) async {
     final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento_tipo/');

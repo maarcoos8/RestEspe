@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from pydantic import ConfigDict
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 
@@ -30,6 +30,7 @@ class EstablecimientoUpdate(BaseModel):
 	ultima_verificacion: Optional[datetime] = None
 	verificador_id: Optional[int] = None
 	propietario_id: Optional[int] = None
+	tipos_establecimiento_ids: Optional[List[int]] = None
 
 
 class EstablecimientoOut(EstablecimientoBase):

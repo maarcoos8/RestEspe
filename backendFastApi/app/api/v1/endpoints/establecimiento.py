@@ -139,7 +139,21 @@ def actualizar_establecimiento(
     db_obj = crud.crud_establecimiento.get_establecimiento(db, id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Establecimiento no encontrado")
-    return crud.crud_establecimiento.update_establecimiento(db, db_obj, establecimiento_in)
+
+    # Actualizar campos del establecimiento
+    updated = crud.crud_establecimiento.update_establecimiento(db, db_obj, establecimiento_in)
+
+    # Si se han enviado tipos en la petición, actualizarlos inteligentemente
+    data = establecimiento_in.model_dump(exclude_unset=True)
+    tipos_ids = data.get("tipos_establecimiento_ids")
+    if tipos_ids is not None:
+        try:
+            crud.crud_establecimiento_tipo.update_tipos_establecimiento(db, id, tipos_ids)
+        except Exception as e:
+            # Si hay error actualizando tipos, devolver 400 con detalle
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    return updated
 
 
 @router.delete("/{id}", response_model=EstablecimientoOut)

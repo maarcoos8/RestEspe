@@ -11,6 +11,7 @@ import '../core/constants.dart';
 import '../core/role_constants.dart';
 import '../data/models/admin_user_model.dart';
 import '../data/models/create_establishment_form.dart';
+import '../data/models/restaurant_detail_model.dart';
 import '../data/models/tipo_establecimiento_model.dart';
 import '../data/services/admin_service.dart';
 import '../data/services/image_upload_service.dart';
@@ -18,14 +19,24 @@ import '../data/services/geocoding_service.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/scaffold_with_nav.dart';
 
-/// Pantalla para crear un nuevo establecimiento.
+/// Pantalla para crear o editar un establecimiento.
 /// Incluye campos para:
 /// - Nombre
 /// - Imagen (con Cloudinary)
 /// - Dirección (texto + mapa para coordenadas)
 /// - Tipos de establecimiento (multi-select)
 class CreateEstablishmentScreen extends StatefulWidget {
-  const CreateEstablishmentScreen({super.key});
+  const CreateEstablishmentScreen({
+    super.key,
+    this.restaurantToEdit,
+    this.tiposEstablecimientoIds = const [],
+  });
+
+  /// Si se proporciona, la pantalla estará en modo edición
+  final RestaurantDetail? restaurantToEdit;
+  
+  /// Tipos de establecimiento asociados (para modo edición)
+  final List<int> tiposEstablecimientoIds;
 
   @override
   State<CreateEstablishmentScreen> createState() => _CreateEstablishmentScreenState();
@@ -40,6 +51,9 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
   final _longitudController = TextEditingController();
   final _propietarioSearchController = TextEditingController();
   late MapController _mapController;
+
+  late final bool _isEditMode;
+  late final RestaurantDetail? _restaurantToEdit;
 
   final CreateEstablishmentForm _formData = CreateEstablishmentForm(
     nombre: '',
@@ -61,6 +75,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
   Set<int> _tiposSeleccionados = {};
   AdminUserModel? _selectedPropietario;
   bool _showPropietarioSuggestions = false;
+  bool _isPropietarioEditable = true; // El propietario es editable por defecto
 
   LatLng _mapCenter = const LatLng(40.4168, -3.7038); // Madrid por defecto
   String? _errorMessage;
@@ -69,35 +84,90 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
   void initState() {
     super.initState();
     _mapController = MapController();
+    _restaurantToEdit = widget.restaurantToEdit;
+    _isEditMode = _restaurantToEdit != null;
+    
     _loadTiposEstablecimiento();
     _direccionController.addListener(_onDireccionChanged);
     _propietarioSearchController.addListener(_onPropietarioSearchChanged);
     
-    // Si el usuario es propietario, pre-llenar el campo de propietario
+    // Determinar si el propietario es editable según el rol
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializePropietarioIfOwner();
+      _initializeFormAndCheckPermissions();
     });
   }
 
-  /// Si el usuario actual es propietario, pre-llena el campo de propietario con él mismo
-  void _initializePropietarioIfOwner() {
+  /// Inicializa el formulario y verifica permisos para editar propietario
+  void _initializeFormAndCheckPermissions() {
     final authProvider = context.read<AuthProvider>();
     final user = authProvider.currentUser;
     
-    if (user != null && user.idRol == RoleConstants.rolPropietario) {
-      setState(() {
-        _selectedPropietario = AdminUserModel(
-          idUsuario: user.idUsuario,
-          email: user.email,
-          nombreCompleto: user.nombreCompleto,
-          fotoPerfil: user.fotoPerfil,
-          idRol: user.idRol,
-        );
-        _propietarioSearchController.text = '${user.nombreCompleto ?? user.email} (Tú)';
-        _formData.propietarioId = user.idUsuario;
-        _showPropietarioSuggestions = false;
-      });
+    if (_isEditMode && _restaurantToEdit != null) {
+      // Modo edición: cargar datos del establecimiento
+      _loadEstablishmentDataForEditing();
+      
+      // El propietario solo es editable para superadmin
+      _isPropietarioEditable = user?.idRol == RoleConstants.rolSuperadmin;
+    } else {
+      // Modo creación: si el usuario es propietario, pre-llenar con él
+      if (user != null && user.idRol == RoleConstants.rolPropietario) {
+        setState(() {
+          _selectedPropietario = AdminUserModel(
+            idUsuario: user.idUsuario,
+            email: user.email,
+            nombreCompleto: user.nombreCompleto,
+            fotoPerfil: user.fotoPerfil,
+            idRol: user.idRol,
+          );
+          _propietarioSearchController.text = '${user.nombreCompleto ?? user.email} (Tú)';
+          _formData.propietarioId = user.idUsuario;
+          _showPropietarioSuggestions = false;
+        });
+      }
     }
+  }
+
+  /// Carga los datos del establecimiento para modo edición
+  void _loadEstablishmentDataForEditing() {
+    if (_restaurantToEdit == null) return;
+
+    setState(() {
+      // Cargar campos básicos
+      _nombreController.text = _restaurantToEdit!.nombre;
+      _direccionController.text = _restaurantToEdit!.direccionTexto ?? '';
+      
+      if (_restaurantToEdit!.coordinates != null) {
+        _mapCenter = _restaurantToEdit!.coordinates!;
+        _latitudController.text = _restaurantToEdit!.coordinates!.latitude.toStringAsFixed(6);
+        _longitudController.text = _restaurantToEdit!.coordinates!.longitude.toStringAsFixed(6);
+        _formData.latitud = _restaurantToEdit!.coordinates!.latitude;
+        _formData.longitud = _restaurantToEdit!.coordinates!.longitude;
+      }
+      
+      if (_restaurantToEdit!.imagenUrl != null) {
+        _formData.imagenUrl = _restaurantToEdit!.imagenUrl;
+      }
+      
+      // Cargar tipos de establecimiento
+      _tiposSeleccionados = Set<int>.from(widget.tiposEstablecimientoIds);
+      _formData.tiposEstablecimientoIds = widget.tiposEstablecimientoIds;
+      
+      // Cargar propietario
+      if (_restaurantToEdit!.propietarioId != null) {
+        _selectedPropietario = AdminUserModel(
+          idUsuario: _restaurantToEdit!.propietarioId!,
+          email: 'propietario@example.com',
+          nombreCompleto: 'Propietario del establecimiento',
+          fotoPerfil: null,
+          idRol: RoleConstants.rolPropietario,
+        );
+        _propietarioSearchController.text = 'Propietario del establecimiento';
+        _formData.propietarioId = _restaurantToEdit!.propietarioId;
+      }
+      
+      _formData.nombre = _nombreController.text;
+      _formData.direccionTexto = _direccionController.text;
+    });
   }
 
   @override
@@ -492,7 +562,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
     );
   }
 
-  /// Crea el establecimiento en el backend.
+  /// Crea o actualiza el establecimiento en el backend.
   Future<void> _createEstablishment() async {
     if (!_formKey.currentState!.validate()) {
       _setTopError('Revisa los campos marcados en rojo');
@@ -518,14 +588,30 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
       _formData.direccionTexto = _direccionController.text.trim();
       _formData.tiposEstablecimientoIds = _tiposSeleccionados.toList();
 
-      // Crear establecimiento
-      await AdminService.createEstablishment(_formData);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Establecimiento creado correctamente')),
+      if (_isEditMode && _restaurantToEdit != null) {
+        // Modo actualización
+        await AdminService.updateEstablishment(
+          _restaurantToEdit!.idEstablecimiento,
+          _formData,
+          _tiposSeleccionados.toList(),
         );
-        Navigator.pop(context, true); // Señalar que se creó algo
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Establecimiento actualizado correctamente')),
+          );
+          Navigator.pop(context, true); // Señalar que se actualizó algo
+        }
+      } else {
+        // Modo creación
+        await AdminService.createEstablishment(_formData);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Establecimiento creado correctamente')),
+          );
+          Navigator.pop(context, true); // Señalar que se creó algo
+        }
       }
     } catch (e) {
       setState(() {
@@ -544,7 +630,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
         _showExitConfirmation();
       },
       child: ScaffoldWithNav(
-        title: 'Crear Establecimiento',
+        title: _isEditMode ? 'Editar Establecimiento' : 'Crear Establecimiento',
         currentIndex: 3,
         body: _isLoadingTipos
             ? const Center(
@@ -1010,13 +1096,17 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                     Builder(
                       builder: (context) {
                         final authProvider = context.read<AuthProvider>();
+                        final isSuperadmin = RoleConstants.isSuperadmin(authProvider.currentUser?.idRol);
                         final isOwner = authProvider.currentUser?.idRol == RoleConstants.rolPropietario;
+                        
+                        // En modo edición, solo superadmin puede editar el propietario
+                        final canEditPropietario = !_isEditMode || isSuperadmin;
                         
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Propietario del Establecimiento${isOwner ? '' : ' (Opcional)'}',
+                              'Propietario del Establecimiento${isOwner || !canEditPropietario ? '' : ' (Opcional)'}',
                               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -1024,9 +1114,9 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                             const SizedBox(height: 8),
                             TextFormField(
                               controller: _propietarioSearchController,
-                              enabled: !isOwner, // Read-only si es propietario
+                              enabled: canEditPropietario && !isOwner, // No editable si es propietario o no hay permisos
                               decoration: InputDecoration(
-                                hintText: 'Busca por nombre o email...',
+                                hintText: canEditPropietario ? 'Busca por nombre o email...' : 'No editable',
                                 hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                       color: const Color(0xFF9E9E9E),
                                     ),
@@ -1035,7 +1125,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                 ),
                                 filled: true,
                                 fillColor: const Color(AppColors.white),
-                                suffixIcon: _selectedPropietario != null && !isOwner
+                                suffixIcon: _selectedPropietario != null && canEditPropietario && !isOwner
                                     ? IconButton(
                                         icon: const Icon(Icons.clear),
                                         onPressed: () {
@@ -1062,7 +1152,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                               ),
                             ),
                             // Sugerencias de usuarios
-                            if (_showPropietarioSuggestions && _usuariosFiltrados.isNotEmpty && !isOwner)
+                            if (_showPropietarioSuggestions && _usuariosFiltrados.isNotEmpty && canEditPropietario && !isOwner)
                               Container(
                                 margin: const EdgeInsets.only(top: 8),
                                 decoration: BoxDecoration(
@@ -1160,7 +1250,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                     ),
                                   )
-                                : const Text('Guardar'),
+                                : Text(_isEditMode ? 'Guardar cambios' : 'Guardar'),
                           ),
                         ),
                       ],

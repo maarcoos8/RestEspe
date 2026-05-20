@@ -32,6 +32,11 @@ abstract class RoleConstants {
     return userRoleId == rolAdministradorGlobal || userRoleId == rolSuperadmin;
   }
 
+  /// Check if user is superadmin
+  static bool isSuperadmin(int? userRoleId) {
+    return userRoleId == rolSuperadmin;
+  }
+
   /// Check if user can manage establishments (propietario or admin)
   static bool canManageEstablishments(int? userRoleId) {
     return userRoleId == rolPropietario ||

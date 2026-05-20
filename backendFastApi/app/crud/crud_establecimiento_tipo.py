@@ -52,6 +52,45 @@ def create_establecimiento_tipo(db: Session, id_establecimiento: int, id_tipo_es
     return db_obj
 
 
+def update_tipos_establecimiento(
+    db: Session, id_establecimiento: int, nuevos_tipos_ids: List[int]
+) -> List[EstablecimientoTipo]:
+    """
+    Actualiza inteligentemente los tipos de un establecimiento.
+    
+    Solo elimina y crea los tipos que han cambiado, evitando errores de duplicados.
+    
+    Args:
+        db: Sesión de base de datos
+        id_establecimiento: ID del establecimiento
+        nuevos_tipos_ids: Lista de IDs de tipos nuevos
+        
+    Returns:
+        Lista de tipos después de la actualización
+    """
+    # Obtener tipos actuales
+    tipos_actuales = get_tipos_por_establecimiento(db, id_establecimiento)
+    tipos_actuales_ids = {tipo.id_tipo_establecimiento for tipo in tipos_actuales}
+    nuevos_tipos_ids_set = set(nuevos_tipos_ids)
+    
+    # Tipos a eliminar (están en actuales pero no en nuevos)
+    a_eliminar = tipos_actuales_ids - nuevos_tipos_ids_set
+    
+    # Tipos a crear (están en nuevos pero no en actuales)
+    a_crear = nuevos_tipos_ids_set - tipos_actuales_ids
+    
+    # Eliminar tipos que ya no deben estar
+    for tipo_id in a_eliminar:
+        remove_establecimiento_tipo(db, id_establecimiento, tipo_id)
+    
+    # Crear nuevos tipos
+    for tipo_id in a_crear:
+        create_establecimiento_tipo(db, id_establecimiento, tipo_id)
+    
+    # Retornar los tipos actualizados
+    return get_tipos_por_establecimiento(db, id_establecimiento)
+
+
 def remove_establecimiento_tipo(
     db: Session, id_establecimiento: int, id_tipo_establecimiento: int
 ) -> Optional[EstablecimientoTipo]:
