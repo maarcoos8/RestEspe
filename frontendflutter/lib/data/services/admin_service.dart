@@ -277,6 +277,18 @@ class AdminService {
     }
   }
 
+  /// Elimina un establecimiento por id.
+  static Future<void> deleteEstablecimiento(int idEstablecimiento) async {
+    final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento/$idEstablecimiento');
+    final response = await http.delete(uri);
+    if (response.statusCode != 200) {
+      throw Exception(_extractErrorMessage(
+        response,
+        'Error al eliminar establecimiento: $idEstablecimiento (status: ${response.statusCode})',
+      ));
+    }
+  }
+
   /// Crea una relación entre un establecimiento y un tipo.
   static Future<void> createEstablecimientoTipo(int idEstablecimiento, int idTipo) async {
     final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento_tipo/');

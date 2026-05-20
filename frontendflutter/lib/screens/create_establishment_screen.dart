@@ -336,8 +336,28 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
     );
 
     if (pickedFile != null) {
+      final imageFile = File(pickedFile.path);
+      
+      // Validar el archivo antes de asignarlo
+      final validationError = await ImageUploadService.validateImageFile(imageFile);
+      if (validationError != null) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = validationError;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(validationError),
+              backgroundColor: const Color(AppColors.errorRed),
+            ),
+          );
+        }
+        return;
+      }
+
       setState(() {
-        _selectedImage = File(pickedFile.path);
+        _selectedImage = imageFile;
+        _errorMessage = null;
       });
     }
   }
@@ -365,14 +385,27 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Imagen subida correctamente')),
+          const SnackBar(
+            content: Text('Imagen subida correctamente'),
+            backgroundColor: Color(AppColors.successGreen),
+          ),
         );
       }
     } catch (e) {
       setState(() {
         _isUploadingImage = false;
-        _errorMessage = 'Error al subir imagen: $e';
+        _errorMessage = 'Error al subir imagen: ${e.toString()}';
       });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: const Color(AppColors.errorRed),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 
@@ -591,6 +624,35 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                               width: double.infinity,
                               height: 200,
                               fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                // Si hay error al decodificar la imagen
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  setState(() {
+                                    _errorMessage = 'Error: La imagen está corrupta o no se puede leer. '
+                                        'Intenta seleccionar otra imagen.';
+                                    _selectedImage = null;
+                                  });
+                                });
+                                return Container(
+                                  width: double.infinity,
+                                  height: 200,
+                                  color: const Color(AppColors.accentBeige).withOpacity(0.3),
+                                  child: const Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.broken_image_rounded,
+                                          size: 48,
+                                          color: Color(AppColors.errorRed),
+                                        ),
+                                        SizedBox(height: 8),
+                                        Text('Imagen dañada'),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                           Positioned(

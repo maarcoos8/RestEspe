@@ -60,6 +60,7 @@ def leer_establecimientos(skip: int = 0, limit: int = 100, db: Session = Depends
             Establecimiento.estado_verificado,
             Establecimiento.ultima_verificacion,
             Establecimiento.verificador_id,
+            Establecimiento.propietario_id,
         )
         .offset(skip)
         .limit(limit)
@@ -78,6 +79,7 @@ def leer_establecimientos(skip: int = 0, limit: int = 100, db: Session = Depends
                 "estado_verificado": r.estado_verificado,
                 "ultima_verificacion": r.ultima_verificacion,
                 "verificador_id": r.verificador_id,
+                "propietario_id": r.propietario_id,
             }
         )
     return result
@@ -95,6 +97,7 @@ def leer_establecimiento(id: int, db: Session = Depends(get_db)):
         Establecimiento.estado_verificado,
         Establecimiento.ultima_verificacion,
         Establecimiento.verificador_id,
+        Establecimiento.propietario_id,
     ).where(Establecimiento.id_establecimiento == id)
 
     row = db.execute(stmt).first()
@@ -110,6 +113,7 @@ def leer_establecimiento(id: int, db: Session = Depends(get_db)):
         "estado_verificado": row.estado_verificado,
         "ultima_verificacion": row.ultima_verificacion,
         "verificador_id": row.verificador_id,
+        "propietario_id": row.propietario_id,
     }
 
 
@@ -140,6 +144,21 @@ def actualizar_establecimiento(
 
 @router.delete("/{id}", response_model=EstablecimientoOut)
 def eliminar_establecimiento(id: int, db: Session = Depends(get_db)):
+    """Elimina un establecimiento y todas sus referencias en cascada.
+    
+    Esta operación eliminará:
+    - Todas las relaciones establecimiento-tipo
+    - Todas las relaciones establecimiento-categoria
+    - Todos los favoritos del establecimiento
+    - Todas las reseñas
+    - Todos los items de menú
+    - Todos los tipos de item de menú
+    - Todas las fotografías
+    - El establecimiento en sí
+    
+    NOTA: En un entorno de producción, se debe validar que el usuario tenga
+    permisos para eliminar (superadmin o propietario del establecimiento).
+    """
     obj = crud.crud_establecimiento.remove_establecimiento(db, id)
     if not obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Establecimiento no encontrado")

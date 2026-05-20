@@ -53,6 +53,7 @@ class RestaurantDetailService {
         puntuacionMedia: puntuacionJson?['puntuacion_media'] as double?,
         numeroResenas: (puntuacionJson?['numero_resenas'] as num?)?.toInt() ?? 0,
         imagenUrl: establecimientoJson['imagen_url'] as String?,
+        propietarioId: establecimientoJson['propietario_id'] as int?,
       );
     } catch (e) {
       print('Error obteniendo detalles del restaurante: $e');

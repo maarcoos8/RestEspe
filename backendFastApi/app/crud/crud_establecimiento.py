@@ -178,9 +178,64 @@ def update_establecimiento(
 
 
 def remove_establecimiento(db: Session, id_establecimiento: int) -> Optional[Establecimiento]:
+    """Elimina un establecimiento y todas sus referencias en cascada.
+    
+    Elimina en el siguiente orden para evitar violaciones de FK:
+    1. establecimiento_tipo
+    2. establecimiento_categoria
+    3. usuario_establecimiento_favorito
+    4. resena
+    5. item_menu
+    6. tipo_item_menu
+    7. fotografia
+    8. establecimiento
+    """
     obj = get_establecimiento(db, id_establecimiento)
     if not obj:
         return None
+    
+    # Eliminar referencias en cascada
+    # 1. Eliminar relaciones establecimiento-tipo
+    db.query(EstablecimientoTipo).filter(
+        EstablecimientoTipo.id_establecimiento == id_establecimiento
+    ).delete()
+    
+    # 2. Eliminar relaciones establecimiento-categoria
+    db.query(EstablecimientoCategoria).filter(
+        EstablecimientoCategoria.id_establecimiento == id_establecimiento
+    ).delete()
+    
+    # 3. Eliminar favoritos del usuario
+    from app.models.usuario_establecimiento_favorito import UsuarioEstablecimientoFavorito
+    db.query(UsuarioEstablecimientoFavorito).filter(
+        UsuarioEstablecimientoFavorito.id_establecimiento == id_establecimiento
+    ).delete()
+    
+    # 4. Eliminar reseñas
+    db.query(Resena).filter(
+        Resena.id_establecimiento == id_establecimiento
+    ).delete()
+    
+    # 5. Eliminar items de menú
+    from app.models.item_menu import ItemMenu
+    db.query(ItemMenu).filter(
+        ItemMenu.id_establecimiento == id_establecimiento
+    ).delete()
+    
+    # 6. Eliminar tipos de item de menú
+    from app.models.tipo_item_menu import TipoItemMenu
+    db.query(TipoItemMenu).filter(
+        TipoItemMenu.id_establecimiento == id_establecimiento
+    ).delete()
+    
+    # 7. Eliminar fotografías
+    from app.models.fotografia import Fotografia
+    db.query(Fotografia).filter(
+        Fotografia.id_establecimiento == id_establecimiento
+    ).delete()
+    
+    # 8. Finalmente, eliminar el establecimiento
     db.delete(obj)
     db.commit()
+    
     return obj

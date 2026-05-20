@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../core/constants.dart';
 import '../data/models/restaurant_detail_model.dart';
+import '../widgets/establishment_actions_buttons.dart';
 import '../widgets/favorite_button.dart';
 import '../widgets/scaffold_with_nav.dart';
 
@@ -231,6 +232,16 @@ class RestaurantDetailScreen extends StatelessWidget {
                           ),
                       ],
                     ),
+                  ),
+                ),
+                Positioned(
+                  left: 24,
+                  top: -20,
+                  child: EstablishmentActionsButtons(
+                    restaurant: restaurant,
+                    onDeleted: () {
+                      Navigator.of(context).pop();
+                    },
                   ),
                 ),
                 Positioned(
