@@ -319,10 +319,8 @@ class _AppMapState extends State<AppMap> {
                             context,
                             restaurant.idEstablecimiento,
                           ),
-                          child: const Icon(
-                            Icons.location_on_rounded,
-                            color: Color(AppColors.primaryOrange),
-                            size: 40,
+                          child: _buildRestaurantMarkerIcon(
+                            isVerified: restaurant.estadoVerificado == true,
                           ),
                         ),
                       ),
@@ -375,6 +373,32 @@ class _AppMapState extends State<AppMap> {
               ),
             ],
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRestaurantMarkerIcon({required bool isVerified}) {
+    if (!isVerified) {
+      return const Icon(
+        Icons.location_on_rounded,
+        color: Color(AppColors.primaryOrange),
+        size: 40,
+      );
+    }
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        const Icon(
+          Icons.location_on_rounded,
+          color: Color(AppColors.primaryGreen),
+          size: 38,
+        ),
+        const Icon(
+          Icons.location_on_rounded,
+          color: Color(AppColors.primaryOrange),
+          size: 32,
         ),
       ],
     );
@@ -439,61 +463,65 @@ class _AppMapState extends State<AppMap> {
               showViewDetailsButton: true,
               onCardTap: () {
                 Navigator.of(context).pop();
-                Navigator.of(rootContext).push(
-                  MaterialPageRoute(
-                    builder: (_) => RestaurantDetailScreen(
-                      restaurant: restaurant,
-                      currentLocation: _currentLocation != null
-                          ? Position(
-                              latitude: _currentLocation!.latitude,
-                              longitude: _currentLocation!.longitude,
-                              timestamp: DateTime.now(),
-                              accuracy: 0,
-                              altitude: 0,
-                              altitudeAccuracy: 0,
-                              heading: 0,
-                              headingAccuracy: 0,
-                              speed: 0,
-                              speedAccuracy: 0,
-                            )
-                          : null,
-                    ),
-                  ),
-                ).then((result) {
-                  // Si se editó un establecimiento, limpiar el caché del mapa
-                  if (result == true) {
-                    _searchProvider?.clearVisibleRestaurantsCache();
-                  }
-                });
+                Navigator.of(rootContext)
+                    .push(
+                      MaterialPageRoute(
+                        builder: (_) => RestaurantDetailScreen(
+                          restaurant: restaurant,
+                          currentLocation: _currentLocation != null
+                              ? Position(
+                                  latitude: _currentLocation!.latitude,
+                                  longitude: _currentLocation!.longitude,
+                                  timestamp: DateTime.now(),
+                                  accuracy: 0,
+                                  altitude: 0,
+                                  altitudeAccuracy: 0,
+                                  heading: 0,
+                                  headingAccuracy: 0,
+                                  speed: 0,
+                                  speedAccuracy: 0,
+                                )
+                              : null,
+                        ),
+                      ),
+                    )
+                    .then((result) {
+                      // Si se editó un establecimiento, limpiar el caché del mapa
+                      if (result == true) {
+                        _searchProvider?.clearVisibleRestaurantsCache();
+                      }
+                    });
               },
               onViewDetailsPressed: () {
                 Navigator.of(context).pop();
-                Navigator.of(rootContext).push(
-                  MaterialPageRoute(
-                    builder: (_) => RestaurantDetailScreen(
-                      restaurant: restaurant,
-                      currentLocation: _currentLocation != null
-                          ? Position(
-                              latitude: _currentLocation!.latitude,
-                              longitude: _currentLocation!.longitude,
-                              timestamp: DateTime.now(),
-                              accuracy: 0,
-                              altitude: 0,
-                              altitudeAccuracy: 0,
-                              heading: 0,
-                              headingAccuracy: 0,
-                              speed: 0,
-                              speedAccuracy: 0,
-                            )
-                          : null,
-                    ),
-                  ),
-                ).then((result) {
-                  // Si se editó un establecimiento, limpiar el caché del mapa
-                  if (result == true) {
-                    _searchProvider?.clearVisibleRestaurantsCache();
-                  }
-                });
+                Navigator.of(rootContext)
+                    .push(
+                      MaterialPageRoute(
+                        builder: (_) => RestaurantDetailScreen(
+                          restaurant: restaurant,
+                          currentLocation: _currentLocation != null
+                              ? Position(
+                                  latitude: _currentLocation!.latitude,
+                                  longitude: _currentLocation!.longitude,
+                                  timestamp: DateTime.now(),
+                                  accuracy: 0,
+                                  altitude: 0,
+                                  altitudeAccuracy: 0,
+                                  heading: 0,
+                                  headingAccuracy: 0,
+                                  speed: 0,
+                                  speedAccuracy: 0,
+                                )
+                              : null,
+                        ),
+                      ),
+                    )
+                    .then((result) {
+                      // Si se editó un establecimiento, limpiar el caché del mapa
+                      if (result == true) {
+                        _searchProvider?.clearVisibleRestaurantsCache();
+                      }
+                    });
               },
             );
           },
