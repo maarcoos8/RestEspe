@@ -59,6 +59,12 @@ class RestaurantDetailProvider extends ChangeNotifier {
     _pendingRequests.clear();
   }
 
+  /// Limpia el caché de un restaurante específico (usado cuando se edita).
+  void clearRestaurantCache(int idEstablecimiento) {
+    _cache.remove(idEstablecimiento);
+    _pendingRequests.remove(idEstablecimiento);
+  }
+
   @override
   void dispose() {
     clearCache();

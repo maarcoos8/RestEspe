@@ -34,12 +34,13 @@ class CreateEstablishmentScreen extends StatefulWidget {
 
   /// Si se proporciona, la pantalla estará en modo edición
   final RestaurantDetail? restaurantToEdit;
-  
+
   /// Tipos de establecimiento asociados (para modo edición)
   final List<int> tiposEstablecimientoIds;
 
   @override
-  State<CreateEstablishmentScreen> createState() => _CreateEstablishmentScreenState();
+  State<CreateEstablishmentScreen> createState() =>
+      _CreateEstablishmentScreenState();
 }
 
 class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
@@ -86,26 +87,26 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
     _mapController = MapController();
     _restaurantToEdit = widget.restaurantToEdit;
     _isEditMode = _restaurantToEdit != null;
-    
+
     _loadTiposEstablecimiento();
     _direccionController.addListener(_onDireccionChanged);
     _propietarioSearchController.addListener(_onPropietarioSearchChanged);
-    
+
     // Determinar si el propietario es editable según el rol
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeFormAndCheckPermissions();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _initializeFormAndCheckPermissions();
     });
   }
 
   /// Inicializa el formulario y verifica permisos para editar propietario
-  void _initializeFormAndCheckPermissions() {
+  Future<void> _initializeFormAndCheckPermissions() async {
     final authProvider = context.read<AuthProvider>();
     final user = authProvider.currentUser;
-    
+
     if (_isEditMode && _restaurantToEdit != null) {
       // Modo edición: cargar datos del establecimiento
-      _loadEstablishmentDataForEditing();
-      
+      await _loadEstablishmentDataForEditing();
+
       // El propietario solo es editable para superadmin
       _isPropietarioEditable = user?.idRol == RoleConstants.rolSuperadmin;
     } else {
@@ -119,7 +120,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
             fotoPerfil: user.fotoPerfil,
             idRol: user.idRol,
           );
-          _propietarioSearchController.text = '${user.nombreCompleto ?? user.email} (Tú)';
+          _propietarioSearchController.clear();
           _formData.propietarioId = user.idUsuario;
           _showPropietarioSuggestions = false;
         });
@@ -128,46 +129,70 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
   }
 
   /// Carga los datos del establecimiento para modo edición
-  void _loadEstablishmentDataForEditing() {
+  Future<void> _loadEstablishmentDataForEditing() async {
     if (_restaurantToEdit == null) return;
 
     setState(() {
       // Cargar campos básicos
       _nombreController.text = _restaurantToEdit!.nombre;
       _direccionController.text = _restaurantToEdit!.direccionTexto ?? '';
-      
+
       if (_restaurantToEdit!.coordinates != null) {
         _mapCenter = _restaurantToEdit!.coordinates!;
-        _latitudController.text = _restaurantToEdit!.coordinates!.latitude.toStringAsFixed(6);
-        _longitudController.text = _restaurantToEdit!.coordinates!.longitude.toStringAsFixed(6);
+        _latitudController.text = _restaurantToEdit!.coordinates!.latitude
+            .toStringAsFixed(6);
+        _longitudController.text = _restaurantToEdit!.coordinates!.longitude
+            .toStringAsFixed(6);
         _formData.latitud = _restaurantToEdit!.coordinates!.latitude;
         _formData.longitud = _restaurantToEdit!.coordinates!.longitude;
       }
-      
+
       if (_restaurantToEdit!.imagenUrl != null) {
         _formData.imagenUrl = _restaurantToEdit!.imagenUrl;
       }
-      
+
       // Cargar tipos de establecimiento
       _tiposSeleccionados = Set<int>.from(widget.tiposEstablecimientoIds);
       _formData.tiposEstablecimientoIds = widget.tiposEstablecimientoIds;
-      
-      // Cargar propietario
-      if (_restaurantToEdit!.propietarioId != null) {
-        _selectedPropietario = AdminUserModel(
-          idUsuario: _restaurantToEdit!.propietarioId!,
-          email: 'propietario@example.com',
-          nombreCompleto: 'Propietario del establecimiento',
-          fotoPerfil: null,
-          idRol: RoleConstants.rolPropietario,
-        );
-        _propietarioSearchController.text = 'Propietario del establecimiento';
-        _formData.propietarioId = _restaurantToEdit!.propietarioId;
-      }
-      
-      _formData.nombre = _nombreController.text;
-      _formData.direccionTexto = _direccionController.text;
     });
+
+    // Cargar propietario con datos reales del backend (async)
+    if (_restaurantToEdit!.propietarioId != null) {
+      try {
+        final usuarios = await AdminService.getUsuarios();
+        final propietario = usuarios.firstWhere(
+          (u) => u.idUsuario == _restaurantToEdit!.propietarioId,
+          orElse: () => AdminUserModel(
+            idUsuario: _restaurantToEdit!.propietarioId!,
+            email: 'No disponible',
+            nombreCompleto: 'Propietario no encontrado',
+            fotoPerfil: null,
+            idRol: RoleConstants.rolPropietario,
+          ),
+        );
+        setState(() {
+          _selectedPropietario = propietario;
+          _propietarioSearchController.text =
+              '${propietario.nombreCompleto ?? propietario.email}';
+          _formData.propietarioId = _restaurantToEdit!.propietarioId;
+        });
+      } catch (e) {
+        print('Error cargando propietario: $e');
+        // Si hay error, dejar valores ficticios como fallback
+        if (mounted) {
+          setState(() {
+            _selectedPropietario = AdminUserModel(
+              idUsuario: _restaurantToEdit!.propietarioId!,
+              email: 'No disponible',
+              nombreCompleto: 'Error cargando propietario',
+              fotoPerfil: null,
+              idRol: RoleConstants.rolPropietario,
+            );
+            _propietarioSearchController.text = 'Error cargando propietario';
+          });
+        }
+      }
+    }
   }
 
   @override
@@ -235,7 +260,9 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
   }
 
   /// Selecciona una ubicación de las sugerencias
-  Future<void> _selectLocationFromSuggestion(LocationSuggestion suggestion) async {
+  Future<void> _selectLocationFromSuggestion(
+    LocationSuggestion suggestion,
+  ) async {
     // Actualizar coordenadas
     setState(() {
       _formData.latitud = suggestion.latitude;
@@ -367,7 +394,10 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
       });
 
       _mapController.move(currentLocation, 15.0);
-      _updateAddressFromCoordinates(currentLocation.latitude, currentLocation.longitude);
+      _updateAddressFromCoordinates(
+        currentLocation.latitude,
+        currentLocation.longitude,
+      );
     } catch (_) {
       if (!mounted) {
         return;
@@ -407,9 +437,11 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
 
     if (pickedFile != null) {
       final imageFile = File(pickedFile.path);
-      
+
       // Validar el archivo antes de asignarlo
-      final validationError = await ImageUploadService.validateImageFile(imageFile);
+      final validationError = await ImageUploadService.validateImageFile(
+        imageFile,
+      );
       if (validationError != null) {
         if (mounted) {
           setState(() {
@@ -479,11 +511,26 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
     }
   }
 
-  /// Elimina la imagen seleccionada.
+  /// Elimina la imagen seleccionada o la URL existente.
+  /// En modo edición, si elimina la imagen guardada, deberá subir una nueva.
   void _removeImage() {
     setState(() {
-      _selectedImage = null;
-      _formData.imagenUrl = null;
+      // Si hay una imagen seleccionada pero no subida, solo la eliminamos
+      if (_selectedImage != null) {
+        _selectedImage = null;
+      } else if (_formData.imagenUrl != null) {
+        // Si estamos en modo edición y elimina la imagen guardada,
+        // la URL se borra pero mostraremos el placeholder de "Seleccionar imagen"
+        _formData.imagenUrl = null;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Imagen eliminada. Selecciona una nueva imagen para continuar.',
+            ),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     });
   }
 
@@ -504,28 +551,32 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
 
     setState(() => _isSearchingPropietarios = true);
 
-    _propietarioSearchTimer = Timer(const Duration(milliseconds: 500), () async {
-      try {
-        final usuarios = await AdminService.searchUsuarios(query);
-        if (mounted) {
-          setState(() {
-            _usuariosFiltrados = usuarios;
-            _isSearchingPropietarios = false;
-          });
+    _propietarioSearchTimer = Timer(
+      const Duration(milliseconds: 500),
+      () async {
+        try {
+          final usuarios = await AdminService.searchUsuarios(query);
+          if (mounted) {
+            setState(() {
+              _usuariosFiltrados = usuarios;
+              _isSearchingPropietarios = false;
+            });
+          }
+        } catch (e) {
+          if (mounted) {
+            setState(() => _isSearchingPropietarios = false);
+          }
         }
-      } catch (e) {
-        if (mounted) {
-          setState(() => _isSearchingPropietarios = false);
-        }
-      }
-    });
+      },
+    );
   }
 
   /// Selecciona un usuario como propietario
   void _selectPropietario(AdminUserModel usuario) {
     setState(() {
       _selectedPropietario = usuario;
-      _propietarioSearchController.text = usuario.nombreCompleto ?? usuario.email;
+      _propietarioSearchController.text =
+          usuario.nombreCompleto ?? usuario.email;
       _showPropietarioSuggestions = false;
       _usuariosFiltrados.clear();
       _formData.propietarioId = usuario.idUsuario;
@@ -534,11 +585,16 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
 
   /// Muestra un diálogo de confirmación antes de salir.
   void _showExitConfirmation() {
+    final title = _isEditMode ? '¿Descartar cambios?' : '¿Descartar cambios?';
+    final message = _isEditMode
+        ? 'Si sales ahora, los cambios que has realizado no se guardarán.'
+        : 'Si sales ahora, los datos que has introducido no se guardarán.';
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('¿Descartar cambios?'),
-        content: const Text('Si sales ahora, los datos que has introducido no se guardarán.'),
+        title: Text(title),
+        content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -550,7 +606,10 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context); // Cerrar el diálogo
-              Navigator.pop(context, false); // Salir de la pantalla de creación
+              Navigator.pop(
+                context,
+                false,
+              ); // Salir de la pantalla de creación/edición
             },
             child: const Text(
               'Descartar',
@@ -598,7 +657,9 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Establecimiento actualizado correctamente')),
+            const SnackBar(
+              content: Text('Establecimiento actualizado correctamente'),
+            ),
           );
           Navigator.pop(context, true); // Señalar que se actualizó algo
         }
@@ -608,7 +669,9 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Establecimiento creado correctamente')),
+            const SnackBar(
+              content: Text('Establecimiento creado correctamente'),
+            ),
           );
           Navigator.pop(context, true); // Señalar que se creó algo
         }
@@ -634,7 +697,9 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
         currentIndex: 3,
         body: _isLoadingTipos
             ? const Center(
-                child: CircularProgressIndicator(color: Color(AppColors.primaryOrange)),
+                child: CircularProgressIndicator(
+                  color: Color(AppColors.primaryOrange),
+                ),
               )
             : SingleChildScrollView(
                 controller: _scrollController,
@@ -650,112 +715,209 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                           padding: const EdgeInsets.all(12),
                           margin: const EdgeInsets.only(bottom: 16),
                           decoration: BoxDecoration(
-                            color: const Color(AppColors.errorRed).withOpacity(0.1),
+                            color: const Color(
+                              AppColors.errorRed,
+                            ).withOpacity(0.1),
                             border: const Border(
-                              left: BorderSide(color: Color(AppColors.errorRed), width: 3),
+                              left: BorderSide(
+                                color: Color(AppColors.errorRed),
+                                width: 3,
+                              ),
                             ),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             _errorMessage!,
-                            style: const TextStyle(color: Color(AppColors.errorRed)),
+                            style: const TextStyle(
+                              color: Color(AppColors.errorRed),
+                            ),
                           ),
                         ),
 
                       // Sección: Nombre
-                    Text(
-                      'Nombre del Establecimiento',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _nombreController,
-                      decoration: InputDecoration(
-                        hintText: 'Ej: Mi Restaurante',
-                        hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: const Color(0xFF9E9E9E),
-                            ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        filled: true,
-                        fillColor: const Color(AppColors.white),
+                      Text(
+                        'Nombre del Establecimiento',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'El nombre es requerido';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Sección: Imagen
-                    Text(
-                      'Imagen del Establecimiento',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (_selectedImage != null)
-                      Stack(
-                        children: [
-                          ClipRRect(
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _nombreController,
+                        decoration: InputDecoration(
+                          hintText: 'Ej: Mi Restaurante',
+                          hintStyle: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: const Color(0xFF9E9E9E)),
+                          border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                            child: Image.file(
-                              _selectedImage!,
-                              width: double.infinity,
-                              height: 200,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                // Si hay error al decodificar la imagen
-                                WidgetsBinding.instance.addPostFrameCallback((_) {
-                                  setState(() {
-                                    _errorMessage = 'Error: La imagen está corrupta o no se puede leer. '
-                                        'Intenta seleccionar otra imagen.';
-                                    _selectedImage = null;
+                          ),
+                          filled: true,
+                          fillColor: const Color(AppColors.white),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'El nombre es requerido';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Sección: Imagen
+                      Text(
+                        'Imagen del Establecimiento',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_selectedImage != null)
+                        Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.file(
+                                _selectedImage!,
+                                width: double.infinity,
+                                height: 200,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  // Si hay error al decodificar la imagen
+                                  WidgetsBinding.instance.addPostFrameCallback((
+                                    _,
+                                  ) {
+                                    setState(() {
+                                      _errorMessage =
+                                          'Error: La imagen está corrupta o no se puede leer. '
+                                          'Intenta seleccionar otra imagen.';
+                                      _selectedImage = null;
+                                    });
                                   });
-                                });
-                                return Container(
-                                  width: double.infinity,
-                                  height: 200,
-                                  color: const Color(AppColors.accentBeige).withOpacity(0.3),
-                                  child: const Center(
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.broken_image_rounded,
-                                          size: 48,
-                                          color: Color(AppColors.errorRed),
-                                        ),
-                                        SizedBox(height: 8),
-                                        Text('Imagen dañada'),
-                                      ],
+                                  return Container(
+                                    width: double.infinity,
+                                    height: 200,
+                                    color: const Color(
+                                      AppColors.accentBeige,
+                                    ).withOpacity(0.3),
+                                    child: const Center(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.broken_image_rounded,
+                                            size: 48,
+                                            color: Color(AppColors.errorRed),
+                                          ),
+                                          SizedBox(height: 8),
+                                          Text('Imagen dañada'),
+                                        ],
+                                      ),
                                     ),
+                                  );
+                                },
+                              ),
+                            ),
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: FloatingActionButton.small(
+                                onPressed: _removeImage,
+                                backgroundColor: const Color(
+                                  AppColors.errorRed,
+                                ),
+                                child: const Icon(Icons.close),
+                              ),
+                            ),
+                            if (_formData.imagenUrl != null)
+                              Positioned(
+                                bottom: 8,
+                                right: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
                                   ),
-                                );
-                              },
+                                  decoration: BoxDecoration(
+                                    color: const Color(AppColors.successGreen),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.check,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Subida',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        )
+                      else if (_selectedImage == null &&
+                          _formData.imagenUrl != null)
+                        Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.network(
+                                _formData.imagenUrl!,
+                                width: double.infinity,
+                                height: 200,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    width: double.infinity,
+                                    height: 200,
+                                    color: const Color(
+                                      AppColors.accentBeige,
+                                    ).withOpacity(0.3),
+                                    child: const Center(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.broken_image_rounded,
+                                            size: 48,
+                                            color: Color(AppColors.errorRed),
+                                          ),
+                                          SizedBox(height: 8),
+                                          Text('No se pudo cargar la imagen'),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
-                          ),
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: FloatingActionButton.small(
-                              onPressed: _removeImage,
-                              backgroundColor: const Color(AppColors.errorRed),
-                              child: const Icon(Icons.close),
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: FloatingActionButton.small(
+                                onPressed: _removeImage,
+                                backgroundColor: const Color(
+                                  AppColors.errorRed,
+                                ),
+                                child: const Icon(Icons.close),
+                              ),
                             ),
-                          ),
-                          if (_formData.imagenUrl != null)
                             Positioned(
                               bottom: 8,
                               right: 8,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(AppColors.successGreen),
                                   borderRadius: BorderRadius.circular(20),
@@ -763,503 +925,914 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                 child: const Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.check, color: Colors.white, size: 16),
+                                    Icon(
+                                      Icons.check,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
                                     SizedBox(width: 4),
                                     Text(
-                                      'Subida',
-                                      style: TextStyle(color: Colors.white, fontSize: 12),
+                                      'Guardada',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
                             ),
+                          ],
+                        ),
+                      if (_selectedImage == null && _formData.imagenUrl == null)
+                        Container(
+                          width: double.infinity,
+                          height: 150,
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: const Color(AppColors.primaryOrange),
+                              width: 2,
+                              style: BorderStyle.solid,
+                            ),
+                            borderRadius: BorderRadius.circular(10),
+                            color: const Color(
+                              AppColors.accentBeige,
+                            ).withOpacity(0.3),
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.image_rounded,
+                                  size: 48,
+                                  color: Color(AppColors.primaryOrange),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Toca para seleccionar una imagen',
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: const Color(AppColors.lightText),
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _selectImage,
+                              icon: const Icon(
+                                Icons.add_photo_alternate_rounded,
+                              ),
+                              label: const Text('Seleccionar Imagen'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(
+                                  AppColors.primaryOrange,
+                                ),
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size.fromHeight(48),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed:
+                                  (_selectedImage == null || _isUploadingImage)
+                                  ? null
+                                  : _uploadImage,
+                              icon: _isUploadingImage
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.cloud_upload_rounded),
+                              label: Text(
+                                _isUploadingImage ? 'Subiendo...' : 'Subir',
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(
+                                  AppColors.primaryGreen,
+                                ),
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size.fromHeight(48),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
-                    if (_selectedImage == null && _formData.imagenUrl == null)
-                      Container(
-                        width: double.infinity,
-                        height: 150,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: const Color(AppColors.primaryOrange),
-                            width: 2,
-                            style: BorderStyle.solid,
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                          color: const Color(AppColors.accentBeige).withOpacity(0.3),
-                        ),
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                      const SizedBox(height: 24),
+
+                      // Sección: Ubicación (Dirección + Mapa integrados)
+                      Text(
+                        'Ubicación',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Campo de búsqueda de dirección con autocompletado
+                      Stack(
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(
-                                Icons.image_rounded,
-                                size: 48,
-                                color: Color(AppColors.primaryOrange),
+                              // Campo de entrada con sugerencias
+                              TextFormField(
+                                controller: _direccionController,
+                                decoration: InputDecoration(
+                                  hintText: 'Busca una dirección...',
+                                  hintStyle: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: const Color(0xFF9E9E9E),
+                                      ),
+                                  prefixIcon: const Icon(
+                                    Icons.location_on_outlined,
+                                  ),
+                                  suffixIcon: _isSearchingLocation
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: Padding(
+                                            padding: EdgeInsets.all(12),
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                        )
+                                      : null,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  filled: true,
+                                  fillColor: const Color(AppColors.white),
+                                ),
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Toca para seleccionar una imagen',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: const Color(AppColors.lightText),
+
+                              // Sugerencias de ubicación
+                              if (_locationSuggestions.isNotEmpty)
+                                Container(
+                                  margin: const EdgeInsets.only(top: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(AppColors.white),
+                                    border: Border.all(
+                                      color: const Color(0x1A000000),
                                     ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: ListView.builder(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    itemCount: _locationSuggestions.length,
+                                    itemBuilder: (context, index) {
+                                      final suggestion =
+                                          _locationSuggestions[index];
+                                      return ListTile(
+                                        dense: true,
+                                        leading: const Icon(
+                                          Icons.place_outlined,
+                                          size: 18,
+                                        ),
+                                        title: Text(
+                                          suggestion.displayName,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall,
+                                        ),
+                                        onTap: () =>
+                                            _selectLocationFromSuggestion(
+                                              suggestion,
+                                            ),
+                                      );
+                                    },
+                                  ),
+                                ),
+
+                              const SizedBox(height: 16),
+
+                              // Coordenadas manuales (2 campos en fila)
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _latitudController,
+                                      decoration: InputDecoration(
+                                        labelText: 'Latitud',
+                                        hintText: '0.0000',
+                                        hintStyle: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              color: const Color(0xFF9E9E9E),
+                                            ),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        filled: true,
+                                        fillColor: const Color(AppColors.white),
+                                      ),
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(
+                                            signed: true,
+                                            decimal: true,
+                                          ),
+                                      onChanged: (value) {
+                                        if (value.isNotEmpty) {
+                                          _updateMapFromCoordinates();
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _longitudController,
+                                      decoration: InputDecoration(
+                                        labelText: 'Longitud',
+                                        hintText: '0.0000',
+                                        hintStyle: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              color: const Color(0xFF9E9E9E),
+                                            ),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        filled: true,
+                                        fillColor: const Color(AppColors.white),
+                                      ),
+                                      keyboardType:
+                                          const TextInputType.numberWithOptions(
+                                            signed: true,
+                                            decimal: true,
+                                          ),
+                                      onChanged: (value) {
+                                        if (value.isNotEmpty) {
+                                          _updateMapFromCoordinates();
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // Mapa interactivo
+                              Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: SizedBox(
+                                      height: 300,
+                                      child: FlutterMap(
+                                        mapController: _mapController,
+                                        options: MapOptions(
+                                          initialCenter: _mapCenter,
+                                          initialZoom: 15.0,
+                                          onTap: (tapPosition, point) {
+                                            setState(() {
+                                              _formData.latitud =
+                                                  point.latitude;
+                                              _formData.longitud =
+                                                  point.longitude;
+                                              _mapCenter = point;
+                                              _latitudController.text = point
+                                                  .latitude
+                                                  .toStringAsFixed(6);
+                                              _longitudController.text = point
+                                                  .longitude
+                                                  .toStringAsFixed(6);
+                                            });
+                                            _updateAddressFromCoordinates(
+                                              point.latitude,
+                                              point.longitude,
+                                            );
+                                          },
+                                        ),
+                                        children: [
+                                          TileLayer(
+                                            urlTemplate:
+                                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                            userAgentPackageName:
+                                                'com.example.resto_espe',
+                                          ),
+                                          MarkerLayer(
+                                            markers:
+                                                _formData.latitud != null &&
+                                                    _formData.longitud != null
+                                                ? [
+                                                    Marker(
+                                                      width: 42,
+                                                      height: 42,
+                                                      point: LatLng(
+                                                        _formData.latitud!,
+                                                        _formData.longitud!,
+                                                      ),
+                                                      alignment:
+                                                          Alignment.topCenter,
+                                                      child: Transform.translate(
+                                                        offset: const Offset(
+                                                          0,
+                                                          6,
+                                                        ),
+                                                        child: const Icon(
+                                                          Icons
+                                                              .location_on_rounded,
+                                                          color: Color(
+                                                            AppColors
+                                                                .primaryOrange,
+                                                          ),
+                                                          size: 40,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ]
+                                                : [],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  // Botón de ubicación actual (esquina inferior derecha)
+                                  Positioned(
+                                    right: 12,
+                                    bottom: 12,
+                                    child: _MapActionButton(
+                                      icon: Icons.my_location_rounded,
+                                      backgroundColor: const Color(
+                                        AppColors.primaryOrange,
+                                      ),
+                                      iconColor: const Color(AppColors.white),
+                                      onTap: _recenterMapToCurrentLocation,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ),
+                        ],
                       ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _selectImage,
-                            icon: const Icon(Icons.add_photo_alternate_rounded),
-                            label: const Text('Seleccionar Imagen'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(AppColors.primaryOrange),
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size.fromHeight(48),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: (_selectedImage == null || _isUploadingImage) ? null : _uploadImage,
-                            icon: _isUploadingImage
-                                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                                : const Icon(Icons.cloud_upload_rounded),
-                            label: Text(_isUploadingImage ? 'Subiendo...' : 'Subir'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(AppColors.primaryGreen),
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size.fromHeight(48),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 24),
 
-                    // Sección: Ubicación (Dirección + Mapa integrados)
-                    Text(
-                      'Ubicación',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Campo de búsqueda de dirección con autocompletado
-                    Stack(
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Campo de entrada con sugerencias
-                            TextFormField(
-                              controller: _direccionController,
-                              decoration: InputDecoration(
-                                hintText: 'Busca una dirección...',
-                                hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: const Color(0xFF9E9E9E),
-                                ),
-                                prefixIcon: const Icon(Icons.location_on_outlined),
-                                suffixIcon: _isSearchingLocation
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: Padding(
-                                          padding: EdgeInsets.all(12),
-                                          child: CircularProgressIndicator(strokeWidth: 2),
-                                        ),
-                                      )
-                                    : null,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                filled: true,
-                                fillColor: const Color(AppColors.white),
-                              ),
-                            ),
-
-                            // Sugerencias de ubicación
-                            if (_locationSuggestions.isNotEmpty)
-                              Container(
-                                margin: const EdgeInsets.only(top: 8),
-                                decoration: BoxDecoration(
-                                  color: const Color(AppColors.white),
-                                  border: Border.all(
-                                    color: const Color(0x1A000000),
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: _locationSuggestions.length,
-                                  itemBuilder: (context, index) {
-                                    final suggestion = _locationSuggestions[index];
-                                    return ListTile(
-                                      dense: true,
-                                      leading: const Icon(Icons.place_outlined, size: 18),
-                                      title: Text(
-                                        suggestion.displayName,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context).textTheme.bodySmall,
-                                      ),
-                                      onTap: () => _selectLocationFromSuggestion(suggestion),
-                                    );
-                                  },
-                                ),
-                              ),
-
-                            const SizedBox(height: 16),
-
-                            // Coordenadas manuales (2 campos en fila)
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _latitudController,
-                                    decoration: InputDecoration(
-                                      labelText: 'Latitud',
-                                      hintText: '0.0000',
-                                      hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: const Color(0xFF9E9E9E),
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      filled: true,
-                                      fillColor: const Color(AppColors.white),
-                                    ),
-                                    keyboardType: const TextInputType.numberWithOptions(
-                                      signed: true,
-                                      decimal: true,
-                                    ),
-                                    onChanged: (value) {
-                                      if (value.isNotEmpty) {
-                                        _updateMapFromCoordinates();
-                                      }
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _longitudController,
-                                    decoration: InputDecoration(
-                                      labelText: 'Longitud',
-                                      hintText: '0.0000',
-                                      hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: const Color(0xFF9E9E9E),
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      filled: true,
-                                      fillColor: const Color(AppColors.white),
-                                    ),
-                                    keyboardType: const TextInputType.numberWithOptions(
-                                      signed: true,
-                                      decimal: true,
-                                    ),
-                                    onChanged: (value) {
-                                      if (value.isNotEmpty) {
-                                        _updateMapFromCoordinates();
-                                      }
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // Mapa interactivo
-                            Stack(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: SizedBox(
-                                    height: 300,
-                                    child: FlutterMap(
-                                      mapController: _mapController,
-                                      options: MapOptions(
-                                        initialCenter: _mapCenter,
-                                        initialZoom: 15.0,
-                                        onTap: (tapPosition, point) {
-                                          setState(() {
-                                            _formData.latitud = point.latitude;
-                                            _formData.longitud = point.longitude;
-                                            _mapCenter = point;
-                                            _latitudController.text = point.latitude.toStringAsFixed(6);
-                                            _longitudController.text = point.longitude.toStringAsFixed(6);
-                                          });
-                                          _updateAddressFromCoordinates(point.latitude, point.longitude);
-                                        },
-                                      ),
-                                      children: [
-                                        TileLayer(
-                                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                          userAgentPackageName: 'com.example.resto_espe',
-                                        ),
-                                        MarkerLayer(
-                                          markers: _formData.latitud != null && _formData.longitud != null
-                                              ? [
-                                                  Marker(
-                                                    width: 42,
-                                                    height: 42,
-                                                    point: LatLng(_formData.latitud!, _formData.longitud!),
-                                                    alignment: Alignment.topCenter,
-                                                    child: Transform.translate(
-                                                      offset: const Offset(0, 6),
-                                                      child: const Icon(
-                                                        Icons.location_on_rounded,
-                                                        color: Color(AppColors.primaryOrange),
-                                                        size: 40,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ]
-                                              : [],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                // Botón de ubicación actual (esquina inferior derecha)
-                                Positioned(
-                                  right: 12,
-                                  bottom: 12,
-                                  child: _MapActionButton(
-                                    icon: Icons.my_location_rounded,
-                                    backgroundColor: const Color(AppColors.primaryOrange),
-                                    iconColor: const Color(AppColors.white),
-                                    onTap: _recenterMapToCurrentLocation,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Sección: Tipos de Establecimiento
-                    Text(
-                      'Tipos de Establecimiento',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (_tiposDisponibles.isEmpty)
+                      // Sección: Tipos de Establecimiento
                       Text(
-                        'No hay tipos disponibles',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: const Color(AppColors.lightText),
-                            ),
-                      )
-                    else
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: _tiposDisponibles.map((tipo) {
-                          final isSelected = _tiposSeleccionados.contains(tipo.idTipoEstablecimiento);
-                          return FilterChip(
-                            label: Text(tipo.nombreCategoria),
-                            selected: isSelected,
-                            onSelected: (selected) {
-                              setState(() {
-                                if (selected) {
-                                  _tiposSeleccionados.add(tipo.idTipoEstablecimiento);
-                                } else {
-                                  _tiposSeleccionados.remove(tipo.idTipoEstablecimiento);
-                                }
-                              });
-                            },
-                            selectedColor: const Color(AppColors.primaryOrange).withOpacity(0.2),
-                            showCheckmark: true,
-                          );
-                        }).toList(),
+                        'Tipos de Establecimiento',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 8),
+                      if (_tiposDisponibles.isEmpty)
+                        Text(
+                          'No hay tipos disponibles',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: const Color(AppColors.lightText),
+                              ),
+                        )
+                      else
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _tiposDisponibles.map((tipo) {
+                            final isSelected = _tiposSeleccionados.contains(
+                              tipo.idTipoEstablecimiento,
+                            );
+                            return FilterChip(
+                              label: Text(tipo.nombreCategoria),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                setState(() {
+                                  if (selected) {
+                                    _tiposSeleccionados.add(
+                                      tipo.idTipoEstablecimiento,
+                                    );
+                                  } else {
+                                    _tiposSeleccionados.remove(
+                                      tipo.idTipoEstablecimiento,
+                                    );
+                                  }
+                                });
+                              },
+                              selectedColor: const Color(
+                                AppColors.primaryOrange,
+                              ).withOpacity(0.2),
+                              showCheckmark: true,
+                            );
+                          }).toList(),
+                        ),
+                      const SizedBox(height: 24),
 
-                    // Sección: Propietario
-                    Builder(
-                      builder: (context) {
-                        final authProvider = context.read<AuthProvider>();
-                        final isSuperadmin = RoleConstants.isSuperadmin(authProvider.currentUser?.idRol);
-                        final isOwner = authProvider.currentUser?.idRol == RoleConstants.rolPropietario;
-                        
-                        // En modo edición, solo superadmin puede editar el propietario
-                        final canEditPropietario = !_isEditMode || isSuperadmin;
-                        
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Propietario del Establecimiento${isOwner || !canEditPropietario ? '' : ' (Opcional)'}',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
+                      // Sección: Propietario
+                      Builder(
+                        builder: (context) {
+                          final authProvider = context.read<AuthProvider>();
+                          final isSuperadmin = RoleConstants.isSuperadmin(
+                            authProvider.currentUser?.idRol,
+                          );
+                          final isOwner =
+                              authProvider.currentUser?.idRol ==
+                              RoleConstants.rolPropietario;
+
+                          // En modo edición, solo superadmin puede editar el propietario
+                          final canEditPropietario =
+                              !_isEditMode || isSuperadmin;
+                          final isReadOnly = !canEditPropietario || isOwner;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Propietario del Establecimiento${isOwner || !canEditPropietario ? '' : ' (Opcional)'}',
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              if (isReadOnly &&
+                                  _selectedPropietario != null &&
+                                  !_isEditMode)
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 16,
                                   ),
-                            ),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              controller: _propietarioSearchController,
-                              enabled: canEditPropietario && !isOwner, // No editable si es propietario o no hay permisos
-                              decoration: InputDecoration(
-                                hintText: canEditPropietario ? 'Busca por nombre o email...' : 'No editable',
-                                hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: const Color(0xFF9E9E9E),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: const Color(0x1A000000),
                                     ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                filled: true,
-                                fillColor: const Color(AppColors.white),
-                                suffixIcon: _selectedPropietario != null && canEditPropietario && !isOwner
-                                    ? IconButton(
-                                        icon: const Icon(Icons.clear),
-                                        onPressed: () {
-                                          setState(() {
-                                            _selectedPropietario = null;
-                                            _propietarioSearchController.clear();
-                                            _formData.propietarioId = null;
-                                            _usuariosFiltrados.clear();
-                                            _showPropietarioSuggestions = false;
-                                          });
-                                        },
-                                      )
-                                    : (_isSearchingPropietarios
-                                        ? const SizedBox(
-                                            width: 40,
-                                            child: Padding(
-                                              padding: EdgeInsets.all(8.0),
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
+                                    borderRadius: BorderRadius.circular(10),
+                                    color: const Color(AppColors.white),
+                                  ),
+                                  child: Text(
+                                    'Tú eres el propietario (No editable)',
+                                    style: Theme.of(context).textTheme.bodyLarge
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(
+                                            AppColors.primaryOrange,
+                                          ),
+                                        ),
+                                  ),
+                                )
+                              else if (!isReadOnly &&
+                                  _selectedPropietario != null &&
+                                  isOwner &&
+                                  !_isEditMode)
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 16,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: const Color(0x1A000000),
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                    color: const Color(AppColors.white),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Tú eres el propietario (No editable)',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w500,
+                                              color: const Color(
+                                                AppColors.primaryOrange,
                                               ),
                                             ),
-                                          )
-                                        : null),
-                              ),
-                            ),
-                            // Sugerencias de usuarios
-                            if (_showPropietarioSuggestions && _usuariosFiltrados.isNotEmpty && canEditPropietario && !isOwner)
-                              Container(
-                                margin: const EdgeInsets.only(top: 8),
-                                decoration: BoxDecoration(
-                                  color: const Color(AppColors.white),
-                                  border: Border.all(
-                                    color: const Color(0x1A000000),
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: _usuariosFiltrados.length,
-                                  itemBuilder: (context, index) {
-                                    final usuario = _usuariosFiltrados[index];
-                                    return ListTile(
-                                      dense: true,
-                                      leading: const Icon(Icons.person_outlined, size: 18),
-                                      title: Text(
-                                        usuario.nombreCompleto ?? usuario.email,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context).textTheme.bodySmall,
                                       ),
-                                      subtitle: Text(
-                                        usuario.email,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                              color: const Color(0xFF757575),
-                                              fontSize: 11,
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _selectedPropietario!.email,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: const Color(0xFF9E9E9E),
                                             ),
                                       ),
-                                      onTap: () => _selectPropietario(usuario),
-                                    );
-                                  },
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 8),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(
+                                              AppColors.primaryOrange,
+                                            ).withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            'Es el propietario (No editable)',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Color(
+                                                AppColors.primaryOrange,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              else if (!isReadOnly &&
+                                  _selectedPropietario != null &&
+                                  !isOwner &&
+                                  canEditPropietario &&
+                                  !_isEditMode)
+                                // Mostrar propietario actual para superadmin que puede editarlo
+                                Column(
+                                  children: [
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 16,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: const Color(0x1A000000),
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                        color: const Color(AppColors.white),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Propietario actual:',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color: const Color(
+                                                    0xFF9E9E9E,
+                                                  ),
+                                                ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            _selectedPropietario!
+                                                    .nombreCompleto ??
+                                                _selectedPropietario!.email,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyLarge
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            _selectedPropietario!.email,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color: const Color(
+                                                    0xFF9E9E9E,
+                                                  ),
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextFormField(
+                                      controller: _propietarioSearchController,
+                                      enabled: canEditPropietario && !isOwner,
+                                      decoration: InputDecoration(
+                                        hintText:
+                                            'Busca un nuevo propietario para cambiar...',
+                                        hintStyle: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              color: const Color(0xFF9E9E9E),
+                                            ),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        filled: true,
+                                        fillColor: const Color(AppColors.white),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              else if (!isReadOnly &&
+                                  _selectedPropietario != null &&
+                                  !isOwner &&
+                                  !canEditPropietario &&
+                                  !_isEditMode)
+                                // Mostrar propietario sin poder editar (propietario normal viendo su establecimiento)
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 16,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: const Color(0x1A000000),
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                    color: const Color(AppColors.white),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _selectedPropietario!.nombreCompleto ??
+                                            _selectedPropietario!.email,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _selectedPropietario!.email,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: const Color(0xFF9E9E9E),
+                                            ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 8),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(
+                                              AppColors.primaryBlue,
+                                            ).withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            'No editable',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Color(
+                                                AppColors.primaryBlue,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              else
+                                TextFormField(
+                                  controller: _propietarioSearchController,
+                                  enabled: canEditPropietario && !isOwner,
+                                  decoration: InputDecoration(
+                                    hintText: canEditPropietario
+                                        ? 'Busca por nombre o email...'
+                                        : 'No editable',
+                                    hintStyle: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: const Color(0xFF9E9E9E),
+                                        ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    filled: true,
+                                    fillColor: const Color(AppColors.white),
+                                    suffixIcon:
+                                        _selectedPropietario != null &&
+                                            canEditPropietario &&
+                                            !isOwner
+                                        ? IconButton(
+                                            icon: const Icon(Icons.clear),
+                                            onPressed: () {
+                                              setState(() {
+                                                _selectedPropietario = null;
+                                                _propietarioSearchController
+                                                    .clear();
+                                                _formData.propietarioId = null;
+                                                _usuariosFiltrados.clear();
+                                                _showPropietarioSuggestions =
+                                                    false;
+                                              });
+                                            },
+                                          )
+                                        : (_isSearchingPropietarios
+                                              ? const SizedBox(
+                                                  width: 40,
+                                                  child: Padding(
+                                                    padding: EdgeInsets.all(
+                                                      8.0,
+                                                    ),
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                        ),
+                                                  ),
+                                                )
+                                              : null),
+                                  ),
+                                ),
+                              // Sugerencias de usuarios
+                              if (_showPropietarioSuggestions &&
+                                  _usuariosFiltrados.isNotEmpty &&
+                                  canEditPropietario &&
+                                  !isOwner)
+                                Container(
+                                  margin: const EdgeInsets.only(top: 8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(AppColors.white),
+                                    border: Border.all(
+                                      color: const Color(0x1A000000),
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: ListView.builder(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    itemCount: _usuariosFiltrados.length,
+                                    itemBuilder: (context, index) {
+                                      final usuario = _usuariosFiltrados[index];
+                                      return ListTile(
+                                        dense: true,
+                                        leading: const Icon(
+                                          Icons.person_outlined,
+                                          size: 18,
+                                        ),
+                                        title: Text(
+                                          usuario.nombreCompleto ??
+                                              usuario.email,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall,
+                                        ),
+                                        subtitle: Text(
+                                          usuario.email,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: const Color(0xFF757575),
+                                                fontSize: 11,
+                                              ),
+                                        ),
+                                        onTap: () =>
+                                            _selectPropietario(usuario),
+                                      );
+                                    },
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Nota importante
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(
+                            AppColors.warningYellow,
+                          ).withOpacity(0.1),
+                          border: const Border(
+                            left: BorderSide(
+                              color: Color(AppColors.warningYellow),
+                              width: 3,
+                            ),
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Los diferentes elementos del menú se añadirán desde la edición del establecimiento.',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: const Color(AppColors.darkText),
+                              ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Botones: Cancelar y Guardar
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: _isCreating
+                                  ? null
+                                  : _showExitConfirmation,
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                side: const BorderSide(
+                                  color: Color(AppColors.primaryOrange),
                                 ),
                               ),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Nota importante
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(AppColors.warningYellow).withOpacity(0.1),
-                        border: const Border(
-                          left: BorderSide(color: Color(AppColors.warningYellow), width: 3),
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'Los diferentes elementos del menú se añadirán desde la edición del establecimiento.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: const Color(AppColors.darkText),
-                            ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Botones: Cancelar y Guardar
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _isCreating ? null : _showExitConfirmation,
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              side: const BorderSide(color: Color(AppColors.primaryOrange)),
-                            ),
-                            child: const Text(
-                              'Cancelar',
-                              style: TextStyle(color: Color(AppColors.primaryOrange)),
+                              child: const Text(
+                                'Cancelar',
+                                style: TextStyle(
+                                  color: Color(AppColors.primaryOrange),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _isCreating ? null : _createEstablishment,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(AppColors.primaryOrange),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            child: _isCreating
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _isCreating
+                                  ? null
+                                  : _createEstablishment,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(
+                                  AppColors.primaryOrange,
+                                ),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                              ),
+                              child: _isCreating
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
+                                            ),
+                                      ),
+                                    )
+                                  : Text(
+                                      _isEditMode
+                                          ? 'Guardar cambios'
+                                          : 'Guardar',
                                     ),
-                                  )
-                                : Text(_isEditMode ? 'Guardar cambios' : 'Guardar'),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                  ],
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
               ),
-            ),
       ),
     );
   }
@@ -1299,11 +1872,7 @@ class _MapActionButton extends StatelessWidget {
         child: SizedBox(
           width: 42,
           height: 42,
-          child: Icon(
-            icon,
-            size: 22,
-            color: iconColor,
-          ),
+          child: Icon(icon, size: 22, color: iconColor),
         ),
       ),
     );

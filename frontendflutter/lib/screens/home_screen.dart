@@ -49,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // y es administrador global
     if (_currentIndex == 3 && roleId == RoleConstants.rolAdministradorGlobal) {
       return FloatingActionButton(
+        heroTag: 'home_screen_create_fab',
         onPressed: _navigateToCreateEstablishment,
         backgroundColor: const Color(AppColors.primaryOrange),
         child: const Icon(Icons.add, color: Colors.white),

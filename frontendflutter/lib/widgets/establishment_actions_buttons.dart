@@ -46,7 +46,12 @@ class _EstablishmentActionsButtonsState
           tiposEstablecimientoIds: tiposIds,
         ),
       ),
-    );
+    ).then((result) {
+      // Si se guardó exitosamente (result == true), ejecutar el callback
+      if (result == true) {
+        widget.onEdit?.call();
+      }
+    });
   }
 
   void _showDeleteConfirmationDialog() {

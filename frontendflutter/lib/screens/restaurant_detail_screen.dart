@@ -32,6 +32,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   late RestaurantDetail _currentRestaurant;
   final RestaurantDetailService _restaurantDetailService = RestaurantDetailService();
   bool _isReloading = false;
+  bool _wasEdited = false; // Bandera para rastrear si se editó
 
   @override
   void initState() {
@@ -55,6 +56,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       if (mounted && updatedRestaurant != null) {
         setState(() {
           _currentRestaurant = updatedRestaurant;
+          _wasEdited = true; // Marcar que se editó exitosamente
         });
       }
     } catch (e) {
@@ -106,9 +108,17 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return; // Si ya se removió, no hacer nada
+        
         // Si se volvió de editar (result == true), recargar los datos
-        if (didPop && result == true) {
+        if (result == true) {
           _reloadRestaurantData();
+          return; // No salir, permitir continuar viendo los datos actualizados
+        }
+        
+        // Si se está intentando salir y se editó, propagar el resultado
+        if (_wasEdited) {
+          Navigator.of(context).pop(true);
         }
       },
       child: ScaffoldWithNav(
@@ -296,6 +306,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                       onDeleted: () {
                         Navigator.of(context).pop();
                       },
+                      onEdit: _reloadRestaurantData,
                     ),
                   ),
                   Positioned(

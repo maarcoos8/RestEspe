@@ -459,7 +459,12 @@ class _AppMapState extends State<AppMap> {
                           : null,
                     ),
                   ),
-                );
+                ).then((result) {
+                  // Si se editó un establecimiento, limpiar el caché del mapa
+                  if (result == true) {
+                    _searchProvider?.clearVisibleRestaurantsCache();
+                  }
+                });
               },
               onViewDetailsPressed: () {
                 Navigator.of(context).pop();
@@ -483,7 +488,12 @@ class _AppMapState extends State<AppMap> {
                           : null,
                     ),
                   ),
-                );
+                ).then((result) {
+                  // Si se editó un establecimiento, limpiar el caché del mapa
+                  if (result == true) {
+                    _searchProvider?.clearVisibleRestaurantsCache();
+                  }
+                });
               },
             );
           },

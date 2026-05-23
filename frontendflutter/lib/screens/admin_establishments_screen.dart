@@ -175,7 +175,12 @@ class _AdminEstablishmentsScreenState extends State<AdminEstablishmentsScreen> {
       MaterialPageRoute(
         builder: (_) => RestaurantDetailScreen(restaurant: restaurant),
       ),
-    );
+    ).then((result) {
+      // Si se editó un establecimiento desde el detalle, recargar la lista
+      if (result == true) {
+        _loadFirstPage();
+      }
+    });
   }
 
   /// Navega a la pantalla de crear establecimiento.

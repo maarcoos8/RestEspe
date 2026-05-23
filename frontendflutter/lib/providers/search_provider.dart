@@ -258,6 +258,15 @@ class SearchProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Limpia la caché de restaurantes visibles en el mapa.
+  /// Se llama cuando vuelves de editar un establecimiento para forzar
+  /// una recarga de datos desde el servidor.
+  void clearVisibleRestaurantsCache() {
+    _visibleRestaurants = const [];
+    _viewportGeneration++; // Incrementar para cancelar fetches pendientes
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _debounceTimer?.cancel();
