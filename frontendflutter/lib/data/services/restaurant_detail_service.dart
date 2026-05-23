@@ -133,6 +133,31 @@ class RestaurantDetailService {
     }
   }
 
+  /// Verifica un establecimiento (marca como verificado con id del usuario y fecha actual).
+  /// Endpoint: PUT /establecimiento/{id}
+  Future<bool> verifyEstablishment(int idEstablecimiento, int usuarioId) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/establecimiento/$idEstablecimiento'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'estado_verificado': true,
+          'verificador_id': usuarioId,
+          // El backend se encarga de agregar la fecha actual
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        return true;
+      }
+      print('Error verificando establecimiento: ${response.statusCode}');
+      return false;
+    } catch (e) {
+      print('Error en verify: $e');
+      return false;
+    }
+  }
+
   LatLng? _parseCoordinates(dynamic lat, dynamic lng) {
     if (lat != null && lng != null) {
       try {

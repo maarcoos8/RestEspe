@@ -30,7 +30,8 @@ class RestaurantDetailScreen extends StatefulWidget {
 
 class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   late RestaurantDetail _currentRestaurant;
-  final RestaurantDetailService _restaurantDetailService = RestaurantDetailService();
+  final RestaurantDetailService _restaurantDetailService =
+      RestaurantDetailService();
   bool _isReloading = false;
   bool _wasEdited = false; // Bandera para rastrear si se editó
 
@@ -43,15 +44,14 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   /// Recarga los datos del restaurante desde el servidor
   Future<void> _reloadRestaurantData() async {
     if (_isReloading) return;
-    
+
     setState(() {
       _isReloading = true;
     });
 
     try {
-      final updatedRestaurant = await _restaurantDetailService.getRestaurantDetail(
-        widget.restaurant.idEstablecimiento,
-      );
+      final updatedRestaurant = await _restaurantDetailService
+          .getRestaurantDetail(widget.restaurant.idEstablecimiento);
 
       if (mounted && updatedRestaurant != null) {
         setState(() {
@@ -82,8 +82,33 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     return Color(int.parse('ffFF6B6B', radix: 16));
   }
 
+  String _getVerificationTimeText(DateTime verificationDate) {
+    final now = DateTime.now();
+    final difference = now.difference(verificationDate);
+
+    final days = difference.inDays;
+    final months = (days / 30).floor();
+
+    if (days < 30) {
+      if (days == 0) {
+        return 'hoy';
+      } else if (days == 1) {
+        return 'hace 1 día';
+      } else {
+        return 'hace $days días';
+      }
+    } else {
+      if (months == 1) {
+        return 'hace 1 mes';
+      } else {
+        return 'hace $months meses';
+      }
+    }
+  }
+
   double? _calculateDistance() {
-    if (widget.currentLocation == null || _currentRestaurant.coordinates == null) {
+    if (widget.currentLocation == null ||
+        _currentRestaurant.coordinates == null) {
       return null;
     }
 
@@ -109,13 +134,13 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       canPop: true,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return; // Si ya se removió, no hacer nada
-        
+
         // Si se volvió de editar (result == true), recargar los datos
         if (result == true) {
           _reloadRestaurantData();
           return; // No salir, permitir continuar viendo los datos actualizados
         }
-        
+
         // Si se está intentando salir y se editó, propagar el resultado
         if (_wasEdited) {
           Navigator.of(context).pop(true);
@@ -153,7 +178,9 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                               Expanded(
                                 child: Text(
                                   _currentRestaurant.nombre,
-                                  style: Theme.of(context).textTheme.displaySmall
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .displaySmall
                                       ?.copyWith(
                                         fontWeight: FontWeight.w800,
                                         color: const Color(AppColors.darkText),
@@ -182,7 +209,8 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      (_currentRestaurant.direccionTexto == null ||
+                                      (_currentRestaurant.direccionTexto ==
+                                                  null ||
                                               _currentRestaurant.direccionTexto!
                                                   .trim()
                                                   .isEmpty)
@@ -275,10 +303,10 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: _hexToColor(cat.colorHex)
-                                            .withValues(alpha: 0.15),
-                                        borderRadius:
-                                            BorderRadius.circular(16),
+                                        color: _hexToColor(
+                                          cat.colorHex,
+                                        ).withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: Text(
                                         cat.nombreDieta,
@@ -294,6 +322,50 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                                   )
                                   .toList(),
                             ),
+                          const SizedBox(height: 18),
+                          if (_currentRestaurant.estadoVerificado == true &&
+                              _currentRestaurant.ultimaVerificacion != null)
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.verified,
+                                  size: 20,
+                                  color: Color(AppColors.primaryGreen),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Verificado por ${_currentRestaurant.verificadorId == _currentRestaurant.propietarioId ? 'el propietario' : 'un administrador global'} ${_getVerificationTimeText(_currentRestaurant.ultimaVerificacion!)}',
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: const Color(
+                                            AppColors.primaryGreen,
+                                          ),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.priority_high,
+                                  size: 20,
+                                  color: Color(AppColors.errorRed),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'No verificado',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: const Color(AppColors.errorRed),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                              ],
+                            ),
                         ],
                       ),
                     ),
@@ -307,6 +379,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                         Navigator.of(context).pop();
                       },
                       onEdit: _reloadRestaurantData,
+                      onVerify: _reloadRestaurantData,
                     ),
                   ),
                   Positioned(
@@ -328,8 +401,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                       ),
                       child: Center(
                         child: FavoriteButton(
-                          establishmentId:
-                              _currentRestaurant.idEstablecimiento,
+                          establishmentId: _currentRestaurant.idEstablecimiento,
                           size: 28,
                         ),
                       ),
@@ -358,7 +430,7 @@ class _HeroImage extends StatelessWidget {
       color: const Color(AppColors.accentBeige).withValues(alpha: 0.35),
       child: restaurant.imagenUrl != null && restaurant.imagenUrl!.isNotEmpty
           ? Image.network(
-            restaurant.imagenUrl!,
+              restaurant.imagenUrl!,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
                 return _buildFallback();
