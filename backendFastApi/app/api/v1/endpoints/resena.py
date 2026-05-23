@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app import crud
-from app.schemas.resena import ResenaOut, ResenaCreate, ResenaUpdate
+from app.schemas.resena import ResenaOut, ResenaCreate, ResenaUpdate, ResenaOutWithUser
 
 router = APIRouter(prefix="/resena", tags=["Resena"])
 
@@ -15,9 +15,33 @@ def leer_resenas(db: Session = Depends(get_db)):
     return crud.crud_resena.get_resenas(db)
 
 
-@router.get("/establecimiento/{id_establecimiento}", response_model=List[ResenaOut])
-def leer_resenas_por_establecimiento(id_establecimiento: int, db: Session = Depends(get_db)):
-    return crud.crud_resena.get_resenas_por_establecimiento(db, id_establecimiento)
+@router.get("/establecimiento/{id_establecimiento}", response_model=List[ResenaOutWithUser])
+def leer_resenas_por_establecimiento(
+    id_establecimiento: int,
+    skip: int = 0,
+    limit: int = 5,
+    db: Session = Depends(get_db),
+):
+    """Obtiene reseñas de un establecimiento con datos del usuario con paginación"""
+    resultados = crud.crud_resena.get_resenas_por_establecimiento(
+        db, id_establecimiento, skip=skip, limit=limit
+    )
+    
+    # Convertir tuplas a diccionarios
+    resenas_dict = []
+    for row in resultados:
+        resenas_dict.append({
+            "id_resena": row[0],
+            "id_usuario": row[1],
+            "id_establecimiento": row[2],
+            "puntuacion": row[3],
+            "comentario": row[4],
+            "url_imagen": row[5],
+            "fecha_publicacion": row[6],
+            "nombre_usuario": row[7],
+            "foto_perfil": row[8],
+        })
+    return resenas_dict
 
 
 @router.get("/{id}", response_model=ResenaOut)

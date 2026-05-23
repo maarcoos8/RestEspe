@@ -1,6 +1,5 @@
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from datetime import datetime
 
 from app.models.resena import Resena
 from app.models.usuario import Usuario
@@ -16,11 +15,28 @@ def get_resenas(db: Session) -> List[Resena]:
     return db.query(Resena).all()
 
 
-def get_resenas_por_establecimiento(db: Session, id_establecimiento: int) -> List[Resena]:
+def get_resenas_por_establecimiento(
+    db: Session, id_establecimiento: int, skip: int = 0, limit: int = 5
+) -> List[tuple]:
+    """Obtiene reseñas de un establecimiento con datos del usuario con paginación"""
+    from sqlalchemy import func
     return (
-        db.query(Resena)
+        db.query(
+            Resena.id_resena,
+            Resena.id_usuario,
+            Resena.id_establecimiento,
+            Resena.puntuacion,
+            Resena.comentario,
+            Resena.url_imagen,
+            Resena.fecha_publicacion,
+            Usuario.nombre_completo,
+            Usuario.fotoPerfil,
+        )
+        .join(Usuario, Resena.id_usuario == Usuario.id_usuario)
         .filter(Resena.id_establecimiento == id_establecimiento)
         .order_by(Resena.fecha_publicacion.desc())
+        .offset(skip)
+        .limit(limit)
         .all()
     )
 

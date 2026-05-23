@@ -48,4 +48,13 @@ class ResenaOut(ResenaBase):
     id_resena: int
     fecha_publicacion: Optional[datetime] = None
 
+    class Config:
+        from_attributes = True
+
+
+class ResenaOutWithUser(ResenaOut):
+    """Schema para reseña con datos del usuario enriquecidos"""
+    nombre_usuario: Optional[str] = None
+    foto_perfil: Optional[str] = None
+
     model_config = ConfigDict(from_attributes=True)

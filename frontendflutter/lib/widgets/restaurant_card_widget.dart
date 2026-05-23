@@ -176,8 +176,9 @@ class _RestaurantCardWidgetState extends State<RestaurantCardWidget> {
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: _hexToColor(cat.colorHex)
-                                        .withValues(alpha: 0.15),
+                                    color: _hexToColor(
+                                      cat.colorHex,
+                                    ).withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Text(
@@ -281,7 +282,22 @@ class _RestaurantCardWidgetState extends State<RestaurantCardWidget> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  '${rating.toStringAsFixed(1)} (${widget.restaurant.numeroResenas})',
+                                  rating.toStringAsFixed(1),
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(
+                                        color: _ratingForegroundColor(rating),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                ),
+                                const SizedBox(width: 6),
+                                Icon(
+                                  Icons.star,
+                                  size: 14,
+                                  color: _ratingForegroundColor(rating),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '(${widget.restaurant.numeroResenas})',
                                   style: Theme.of(context).textTheme.labelSmall
                                       ?.copyWith(
                                         color: _ratingForegroundColor(rating),

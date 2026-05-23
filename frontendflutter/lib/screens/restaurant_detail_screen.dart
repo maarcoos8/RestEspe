@@ -2,13 +2,19 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
 
 import '../core/constants.dart';
+import '../core/role_constants.dart';
 import '../data/models/restaurant_detail_model.dart';
+import '../data/models/review_model.dart';
 import '../data/services/restaurant_detail_service.dart';
+import '../data/services/review_service.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/establishment_actions_buttons.dart';
 import '../widgets/favorite_button.dart';
 import '../widgets/scaffold_with_nav.dart';
+import 'review_creation_dialog.dart';
 
 /// Pantalla de detalle básico de un restaurante.
 ///
@@ -32,13 +38,102 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   late RestaurantDetail _currentRestaurant;
   final RestaurantDetailService _restaurantDetailService =
       RestaurantDetailService();
+  final ReviewService _reviewService = ReviewService();
   bool _isReloading = false;
   bool _wasEdited = false; // Bandera para rastrear si se editó
+  String _selectedTab = 'menu'; // 'menu', 'resenas', 'imagenes'
+  List<ReviewModel> _reviews = [];
+  int _reviewSkip = 0;
+  bool _isLoadingReviews = false;
+  bool _hasMoreReviews = true;
+  final ScrollController _reviewScrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _currentRestaurant = widget.restaurant;
+    _reviewScrollController.addListener(_onReviewScroll);
+  }
+
+  @override
+  void dispose() {
+    _reviewScrollController.dispose();
+    super.dispose();
+  }
+
+  /// Carga más reseñas al hacer scroll
+  void _onReviewScroll() {
+    if (_reviewScrollController.position.pixels >=
+            _reviewScrollController.position.maxScrollExtent - 200 &&
+        !_isLoadingReviews &&
+        _hasMoreReviews) {
+      _loadMoreReviews();
+    }
+  }
+
+  /// Carga reseñas iniciales
+  Future<void> _loadInitialReviews() async {
+    if (_isLoadingReviews) return;
+
+    setState(() {
+      _isLoadingReviews = true;
+      _reviewSkip = 0;
+      _reviews = [];
+      _hasMoreReviews = true;
+    });
+
+    try {
+      final newReviews = await _reviewService.getEstablishmentReviews(
+        _currentRestaurant.idEstablecimiento,
+        skip: 0,
+        limit: 5,
+      );
+
+      if (mounted) {
+        setState(() {
+          _reviews = newReviews;
+          _reviewSkip = 5;
+          _hasMoreReviews = newReviews.length == 5;
+          _isLoadingReviews = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingReviews = false;
+        });
+      }
+    }
+  }
+
+  /// Carga más reseñas (infinite scroll)
+  Future<void> _loadMoreReviews() async {
+    setState(() {
+      _isLoadingReviews = true;
+    });
+
+    try {
+      final newReviews = await _reviewService.getEstablishmentReviews(
+        _currentRestaurant.idEstablecimiento,
+        skip: _reviewSkip,
+        limit: 5,
+      );
+
+      if (mounted) {
+        setState(() {
+          _reviews.addAll(newReviews);
+          _reviewSkip += 5;
+          _hasMoreReviews = newReviews.length == 5;
+          _isLoadingReviews = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingReviews = false;
+        });
+      }
+    }
   }
 
   /// Recarga los datos del restaurante desde el servidor
@@ -173,7 +268,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Expanded(
                                 child: Text(
@@ -185,6 +280,8 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                                         fontWeight: FontWeight.w800,
                                         color: const Color(AppColors.darkText),
                                       ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               if (_currentRestaurant.puntuacionMedia != null)
@@ -409,11 +506,498 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                   ),
                 ],
               ),
+              // Menú de secciones: Menú, Reseñas, Imágenes
+              Container(
+                color: const Color(AppColors.white),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(child: _buildTabButton('Menú', 'menu')),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildTabButton('Reseñas', 'resenas')),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildTabButton('Imágenes', 'imagenes')),
+                  ],
+                ),
+              ),
+              Container(height: 1, color: const Color(0x1F000000)),
+              // Contenido de la sección seleccionada
+              Container(
+                color: const Color(AppColors.background),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                child: _buildTabContent(),
+              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildTabButton(String label, String tabValue) {
+    final isSelected = _selectedTab == tabValue;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedTab = tabValue;
+        });
+        // Cargar reseñas si se selecciona la pestaña de reseñas
+        if (tabValue == 'resenas' && _reviews.isEmpty) {
+          _loadInitialReviews();
+        }
+      },
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? const Color(AppColors.primaryOrange)
+                : const Color(0xFFF0F0F0),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: isSelected
+                  ? const Color(AppColors.white)
+                  : const Color(AppColors.darkText),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabContent() {
+    switch (_selectedTab) {
+      case 'resenas':
+        return _buildReviewsSection();
+      case 'imagenes':
+        return Text(
+          'sección imágenes',
+          style: Theme.of(context).textTheme.bodyMedium,
+        );
+      case 'menu':
+      default:
+        return Text(
+          'sección menú',
+          style: Theme.of(context).textTheme.bodyMedium,
+        );
+    }
+  }
+
+  Widget _buildReviewsSection() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUser = authProvider.currentUser;
+    final isOwner = currentUser?.idUsuario == _currentRestaurant.propietarioId;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Botón "Crear nueva reseña" solo si no es propietario
+        if (!isOwner)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => ReviewCreationDialog(
+                      idEstablecimiento: widget.restaurant.idEstablecimiento,
+                      onReviewCreated: (review) {
+                        setState(() {
+                          _reviews.insert(0, review);
+                          // Actualizar puntuación media y contador localmente
+                          final oldAvg =
+                              _currentRestaurant.puntuacionMedia ?? 0.0;
+                          final oldCount = _currentRestaurant.numeroResenas;
+                          final newCount = oldCount + 1;
+                          final newAvg =
+                              ((oldAvg * oldCount) + review.puntuacion) /
+                              newCount;
+                          _currentRestaurant = RestaurantDetail(
+                            idEstablecimiento:
+                                _currentRestaurant.idEstablecimiento,
+                            nombre: _currentRestaurant.nombre,
+                            direccionTexto: _currentRestaurant.direccionTexto,
+                            coordinates: _currentRestaurant.coordinates,
+                            estadoVerificado:
+                                _currentRestaurant.estadoVerificado,
+                            ultimaVerificacion:
+                                _currentRestaurant.ultimaVerificacion,
+                            verificadorId: _currentRestaurant.verificadorId,
+                            categoriasDieta: _currentRestaurant.categoriasDieta,
+                            tiposEstablecimiento:
+                                _currentRestaurant.tiposEstablecimiento,
+                            puntuacionMedia: newAvg,
+                            numeroResenas: newCount,
+                            imagenUrl: _currentRestaurant.imagenUrl,
+                            propietarioId: _currentRestaurant.propietarioId,
+                          );
+                        });
+                      },
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Crear nueva reseña'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(AppColors.primaryOrange),
+                  foregroundColor: const Color(AppColors.white),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ),
+        // Lista de reseñas con infinite scroll
+        if (_reviews.isEmpty && !_isLoadingReviews)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Text(
+                'Sin reseñas aún',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color(AppColors.lightText),
+                ),
+              ),
+            ),
+          )
+        else
+          SizedBox(
+            height: 400, // Altura fija para la lista de reseñas
+            child: ListView.separated(
+              controller: _reviewScrollController,
+              itemCount: _reviews.length + (_isLoadingReviews ? 1 : 0),
+              separatorBuilder: (_, __) => const SizedBox(height: 16),
+              itemBuilder: (context, index) {
+                if (index == _reviews.length) {
+                  // Loading indicator
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return _buildReviewCard(_reviews[index]);
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildReviewCard(ReviewModel review) {
+    final timeAgo = _getTimeAgoText(review.fechaPublicacion);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isSuperadmin = RoleConstants.isSuperadmin(
+      authProvider.currentUser?.idRol,
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(AppColors.white),
+        border: Border.all(color: const Color(0x1F000000)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Fila: Avatar + Nombre || Estrellas
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Avatar + Nombre
+              Expanded(
+                child: Row(
+                  children: [
+                    // Avatar
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundImage: review.fotoPerfil != null
+                          ? NetworkImage(review.fotoPerfil!)
+                          : null,
+                      child: review.fotoPerfil == null
+                          ? const Icon(Icons.person, size: 20)
+                          : null,
+                    ),
+                    const SizedBox(width: 8),
+                    // Nombre
+                    Expanded(
+                      child: Text(
+                        review.nombreUsuario ?? 'Usuario anónimo',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Estrellas
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(
+                  5,
+                  (index) => Icon(
+                    index < review.puntuacion.toInt()
+                        ? Icons.star
+                        : (index < review.puntuacion
+                              ? Icons.star_half
+                              : Icons.star_outline),
+                    size: 16,
+                    color: const Color(AppColors.primaryOrange),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Comentario
+          if (review.comentario != null && review.comentario!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                review.comentario!,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          // Imagen (si existe)
+          if (review.urlImagen != null && review.urlImagen!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: GestureDetector(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return Dialog(
+                        insetPadding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 24,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: InteractiveViewer(
+                            panEnabled: true,
+                            minScale: 1.0,
+                            maxScale: 4.0,
+                            child: Image.network(
+                              review.urlImagen!,
+                              fit: BoxFit.contain,
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return SizedBox(
+                                  height: 240,
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      value: progress.expectedTotalBytes != null
+                                          ? progress.cumulativeBytesLoaded /
+                                                (progress.expectedTotalBytes ??
+                                                    1)
+                                          : null,
+                                    ),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                    height: 240,
+                                    color: Colors.grey[300],
+                                    child: const Icon(
+                                      Icons.image_not_supported,
+                                    ),
+                                  ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.network(
+                    review.urlImagen!,
+                    height: 120,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 120,
+                      color: Colors.grey[300],
+                      child: const Icon(Icons.image_not_supported),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          // Acciones inferiores y fecha
+          Row(
+            children: [
+              if (isSuperadmin)
+                Container(
+                  margin: const EdgeInsets.only(right: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(
+                      AppColors.errorRed,
+                    ).withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(
+                        AppColors.errorRed,
+                      ).withValues(alpha: 0.28),
+                      width: 1,
+                    ),
+                  ),
+                  child: IconButton(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.all(2),
+                    constraints: const BoxConstraints(
+                      minWidth: 28,
+                      minHeight: 28,
+                    ),
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      size: 18,
+                      color: Color(AppColors.errorRed),
+                    ),
+                    onPressed: () => _confirmDeleteReview(review),
+                  ),
+                ),
+              const Spacer(),
+              Text(
+                timeAgo,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: const Color(AppColors.lightText),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmDeleteReview(ReviewModel review) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Eliminar reseña'),
+          content: const Text(
+            '¿Seguro que quieres eliminar esta reseña? Esta acción no se puede deshacer.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(AppColors.errorRed),
+              ),
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    final deleted = await _reviewService.deleteReview(review.idResena);
+    if (!mounted) return;
+
+    if (deleted) {
+      setState(() {
+        _reviews.removeWhere((item) => item.idResena == review.idResena);
+
+        final oldCount = _currentRestaurant.numeroResenas;
+        if (oldCount <= 1) {
+          _currentRestaurant = RestaurantDetail(
+            idEstablecimiento: _currentRestaurant.idEstablecimiento,
+            nombre: _currentRestaurant.nombre,
+            direccionTexto: _currentRestaurant.direccionTexto,
+            coordinates: _currentRestaurant.coordinates,
+            estadoVerificado: _currentRestaurant.estadoVerificado,
+            ultimaVerificacion: _currentRestaurant.ultimaVerificacion,
+            verificadorId: _currentRestaurant.verificadorId,
+            categoriasDieta: _currentRestaurant.categoriasDieta,
+            tiposEstablecimiento: _currentRestaurant.tiposEstablecimiento,
+            puntuacionMedia: null,
+            numeroResenas: 0,
+            imagenUrl: _currentRestaurant.imagenUrl,
+            propietarioId: _currentRestaurant.propietarioId,
+          );
+        } else {
+          final oldAvg = _currentRestaurant.puntuacionMedia ?? 0.0;
+          final newCount = oldCount - 1;
+          final newAvg = ((oldAvg * oldCount) - review.puntuacion) / newCount;
+          _currentRestaurant = RestaurantDetail(
+            idEstablecimiento: _currentRestaurant.idEstablecimiento,
+            nombre: _currentRestaurant.nombre,
+            direccionTexto: _currentRestaurant.direccionTexto,
+            coordinates: _currentRestaurant.coordinates,
+            estadoVerificado: _currentRestaurant.estadoVerificado,
+            ultimaVerificacion: _currentRestaurant.ultimaVerificacion,
+            verificadorId: _currentRestaurant.verificadorId,
+            categoriasDieta: _currentRestaurant.categoriasDieta,
+            tiposEstablecimiento: _currentRestaurant.tiposEstablecimiento,
+            puntuacionMedia: newAvg,
+            numeroResenas: newCount,
+            imagenUrl: _currentRestaurant.imagenUrl,
+            propietarioId: _currentRestaurant.propietarioId,
+          );
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Reseña eliminada'),
+          backgroundColor: Color(AppColors.successGreen),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo eliminar la reseña'),
+          backgroundColor: Color(AppColors.errorRed),
+        ),
+      );
+    }
+  }
+
+  String _getTimeAgoText(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inMinutes < 1) {
+      return 'hace unos segundos';
+    } else if (difference.inHours < 1) {
+      final mins = difference.inMinutes;
+      return 'hace $mins ${mins == 1 ? "minuto" : "minutos"}';
+    } else if (difference.inDays < 1) {
+      final hours = difference.inHours;
+      return 'hace $hours ${hours == 1 ? "hora" : "horas"}';
+    } else if (difference.inDays < 7) {
+      final days = difference.inDays;
+      return 'hace $days ${days == 1 ? "día" : "días"}';
+    } else if (difference.inDays < 30) {
+      final weeks = (difference.inDays / 7).floor();
+      return 'hace $weeks ${weeks == 1 ? "semana" : "semanas"}';
+    } else {
+      final months = (difference.inDays / 30).floor();
+      return 'hace $months ${months == 1 ? "mes" : "meses"}';
+    }
   }
 }
 
@@ -469,12 +1053,27 @@ class _RatingBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: foreground.withValues(alpha: 0.35), width: 1),
       ),
-      child: Text(
-        '${rating.toStringAsFixed(1)} ($reviews)',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: foreground,
-          fontWeight: FontWeight.w700,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            rating.toStringAsFixed(1),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: foreground,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Icon(Icons.star, size: 14, color: foreground),
+          const SizedBox(width: 6),
+          Text(
+            '($reviews)',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: foreground,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
