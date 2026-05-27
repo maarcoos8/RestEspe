@@ -287,7 +287,15 @@ class _AppMapState extends State<AppMap> {
           _mapCenter = camera.center;
           _currentZoom = camera.zoom;
           _updateReferencePoint(camera.center);
-          _updateViewportBounds(camera.visibleBounds);
+          
+          // Solo actualizar viewport bounds si el zoom es mayor o igual al zoom por defecto (13.0)
+          // Para evitar mostrar demasiados pines cuando está muy alejado
+          if (camera.zoom >= 13.0) {
+            _updateViewportBounds(camera.visibleBounds);
+          } else {
+            // Si el zoom es menor al predeterminado, limpiar los restaurantes visibles
+            _searchProvider?.clearVisibleRestaurantsCache();
+          }
         },
       ),
       children: [

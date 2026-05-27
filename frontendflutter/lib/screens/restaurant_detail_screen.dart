@@ -262,7 +262,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       },
       child: ScaffoldWithNav(
         title: 'Detalle del establecimiento',
-        currentIndex: 1,
+        currentIndex: -1, // Ninguna pestaña seleccionada cuando estamos en el detalle
         body: _buildScrollableView(),
       ),
     );
