@@ -21,6 +21,12 @@ class AppConstants {
   // Storage Keys
   static const String tokenKey = 'jwt_token';
   static const String userKey = 'user_data';
+
+  // Roles
+  static const int roleUsuario = 1;
+  static const int rolePropietario = 2;
+  static const int roleAdministradorGlobal = 3;
+  static const int roleSuperAdmin = 4;
 }
 
 class AppColors {

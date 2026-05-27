@@ -25,6 +25,32 @@ def get_fotografias_por_establecimiento(db: Session, id_establecimiento: int) ->
     )
 
 
+def get_fotografias_por_establecimiento_with_user(
+    db: Session, id_establecimiento: int
+) -> List[dict]:
+    """Obtiene las fotografías de un establecimiento con información del usuario.
+    
+    Devuelve una lista de diccionarios con los datos de la foto y del usuario
+    que la subió (nombre y foto de perfil).
+    """
+    fotografias = get_fotografias_por_establecimiento(db, id_establecimiento)
+    result = []
+    
+    for foto in fotografias:
+        usuario = db.query(Usuario).filter(Usuario.id_usuario == foto.id_usuario).first()
+        result.append({
+            "id_foto": foto.id_foto,
+            "id_establecimiento": foto.id_establecimiento,
+            "id_usuario": foto.id_usuario,
+            "url_imagen": foto.url_imagen,
+            "fecha_subida": foto.fecha_subida,
+            "nombre_usuario": usuario.nombre_completo if usuario else None,
+            "foto_perfil": usuario.fotoPerfil if usuario else None,
+        })
+    
+    return result
+
+
 def create_fotografia(db: Session, fotografia_in: FotografiaCreate) -> Fotografia:
     if not db.query(Usuario).filter(Usuario.id_usuario == fotografia_in.id_usuario).first():
         raise ValueError("Usuario no encontrado")

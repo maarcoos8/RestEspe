@@ -25,3 +25,14 @@ class FotografiaOut(FotografiaBase):
     fecha_subida: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class FotografiaWithUserOut(FotografiaBase):
+    """Schema extendido que incluye información del usuario que subió la foto."""
+    id_foto: int
+    fecha_subida: Optional[datetime] = None
+    nombre_usuario: Optional[str] = None
+    foto_perfil: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+

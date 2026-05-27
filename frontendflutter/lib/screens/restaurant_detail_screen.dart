@@ -14,6 +14,7 @@ import '../providers/auth_provider.dart';
 import '../widgets/establishment_actions_buttons.dart';
 import '../widgets/favorite_button.dart';
 import '../widgets/scaffold_with_nav.dart';
+import '../widgets/establishment_gallery_widget.dart';
 import 'review_creation_dialog.dart';
 
 /// Pantalla de detalle básico de un restaurante.
@@ -47,17 +48,35 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   bool _isLoadingReviews = false;
   bool _hasMoreReviews = true;
   final ScrollController _reviewScrollController = ScrollController();
+  final ScrollController _mainScrollController = ScrollController();
+  late Widget _galleryWidget;
 
   @override
   void initState() {
     super.initState();
     _currentRestaurant = widget.restaurant;
+    _galleryWidget = EstablishmentGallery(
+      key: const ValueKey('establishment_gallery'),
+      idEstablecimiento: widget.restaurant.idEstablecimiento,
+    );
     _reviewScrollController.addListener(_onReviewScroll);
+  }
+
+  @override
+  void didUpdateWidget(RestaurantDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.restaurant.idEstablecimiento != widget.restaurant.idEstablecimiento) {
+      _galleryWidget = EstablishmentGallery(
+        key: const ValueKey('establishment_gallery'),
+        idEstablecimiento: widget.restaurant.idEstablecimiento,
+      );
+    }
   }
 
   @override
   void dispose() {
     _reviewScrollController.dispose();
+    _mainScrollController.dispose();
     super.dispose();
   }
 
@@ -244,7 +263,14 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       child: ScaffoldWithNav(
         title: 'Detalle del establecimiento',
         currentIndex: 1,
-        body: SingleChildScrollView(
+        body: _buildScrollableView(),
+      ),
+    );
+  }
+
+  Widget _buildScrollableView() {
+    return SingleChildScrollView(
+          controller: _mainScrollController,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -527,14 +553,11 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
               // Contenido de la sección seleccionada
               Container(
                 color: const Color(AppColors.background),
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                child: _buildTabContent(),
+                child: _buildTabContentWithIndexedStack(),
               ),
             ],
           ),
-        ),
-      ),
-    );
+        );
   }
 
   Widget _buildTabButton(String label, String tabValue) {
@@ -544,6 +567,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
         setState(() {
           _selectedTab = tabValue;
         });
+        
         // Cargar reseñas si se selecciona la pestaña de reseñas
         if (tabValue == 'resenas' && _reviews.isEmpty) {
           _loadInitialReviews();
@@ -577,16 +601,54 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       case 'resenas':
         return _buildReviewsSection();
       case 'imagenes':
-        return Text(
-          'sección imágenes',
-          style: Theme.of(context).textTheme.bodyMedium,
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
+          child: _galleryWidget,
         );
       case 'menu':
       default:
-        return Text(
-          'sección menú',
-          style: Theme.of(context).textTheme.bodyMedium,
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          child: Text(
+            'sección menú',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
         );
+    }
+  }
+
+  Widget _buildTabContentWithIndexedStack() {
+    return IndexedStack(
+      index: _getTabIndex(),
+      children: [
+        // Tab 0: Menú
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          child: Text(
+            'sección menú',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+        // Tab 1: Reseñas
+        _buildReviewsSection(),
+        // Tab 2: Imágenes
+        Padding(
+          padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
+          child: _galleryWidget,
+        ),
+      ],
+    );
+  }
+
+  int _getTabIndex() {
+    switch (_selectedTab) {
+      case 'resenas':
+        return 1;
+      case 'imagenes':
+        return 2;
+      case 'menu':
+      default:
+        return 0;
     }
   }
 
@@ -595,9 +657,11 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     final currentUser = authProvider.currentUser;
     final isOwner = currentUser?.idUsuario == _currentRestaurant.propietarioId;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
         // Botón "Crear nueva reseña" solo si no es propietario
         if (!isOwner)
           Padding(
@@ -674,7 +738,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
             child: ListView.separated(
               controller: _reviewScrollController,
               itemCount: _reviews.length + (_isLoadingReviews ? 1 : 0),
-              separatorBuilder: (_, __) => const SizedBox(height: 16),
+              separatorBuilder: (_, _) => const SizedBox(height: 16),
               itemBuilder: (context, index) {
                 if (index == _reviews.length) {
                   // Loading indicator
@@ -685,6 +749,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
             ),
           ),
       ],
+      ),
     );
   }
 
@@ -702,177 +767,146 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
         border: Border.all(color: const Color(0x1F000000)),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          // Fila: Avatar + Nombre || Estrellas
-          Row(
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Avatar + Nombre
-              Expanded(
-                child: Row(
-                  children: [
-                    // Avatar
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundImage: review.fotoPerfil != null
-                          ? NetworkImage(review.fotoPerfil!)
-                          : null,
-                      child: review.fotoPerfil == null
-                          ? const Icon(Icons.person, size: 20)
-                          : null,
-                    ),
-                    const SizedBox(width: 8),
-                    // Nombre
-                    Expanded(
-                      child: Text(
-                        review.nombreUsuario ?? 'Usuario anónimo',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Estrellas
+              // Fila: Avatar + Nombre || Estrellas
               Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(
-                  5,
-                  (index) => Icon(
-                    index < review.puntuacion.toInt()
-                        ? Icons.star
-                        : (index < review.puntuacion
-                              ? Icons.star_half
-                              : Icons.star_outline),
-                    size: 16,
-                    color: const Color(AppColors.primaryOrange),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Comentario
-          if (review.comentario != null && review.comentario!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                review.comentario!,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-          // Imagen (si existe)
-          if (review.urlImagen != null && review.urlImagen!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: GestureDetector(
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) {
-                      return Dialog(
-                        insetPadding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 24,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Avatar + Nombre
+                  Expanded(
+                    child: Row(
+                      children: [
+                        // Avatar
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundImage: review.fotoPerfil != null
+                              ? NetworkImage(review.fotoPerfil!)
+                              : null,
+                          child: review.fotoPerfil == null
+                              ? const Icon(Icons.person, size: 20)
+                              : null,
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: InteractiveViewer(
-                            panEnabled: true,
-                            minScale: 1.0,
-                            maxScale: 4.0,
-                            child: Image.network(
-                              review.urlImagen!,
-                              fit: BoxFit.contain,
-                              loadingBuilder: (context, child, progress) {
-                                if (progress == null) return child;
-                                return SizedBox(
-                                  height: 240,
-                                  child: Center(
-                                    child: CircularProgressIndicator(
-                                      value: progress.expectedTotalBytes != null
-                                          ? progress.cumulativeBytesLoaded /
-                                                (progress.expectedTotalBytes ??
-                                                    1)
-                                          : null,
-                                    ),
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                    height: 240,
-                                    color: Colors.grey[300],
-                                    child: const Icon(
-                                      Icons.image_not_supported,
-                                    ),
-                                  ),
+                        const SizedBox(width: 8),
+                        // Nombre
+                        Expanded(
+                          child: Text(
+                            review.nombreUsuario ?? 'Usuario anónimo',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Estrellas
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(
+                      5,
+                      (index) => Icon(
+                        index < review.puntuacion.toInt()
+                            ? Icons.star
+                            : (index < review.puntuacion
+                                  ? Icons.star_half
+                                  : Icons.star_outline),
+                        size: 16,
+                        color: const Color(AppColors.primaryOrange),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // Comentario
+              if (review.comentario != null && review.comentario!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    review.comentario!,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              // Imagen (si existe)
+              if (review.urlImagen != null && review.urlImagen!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: GestureDetector(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) {
+                          return Dialog(
+                            insetPadding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 24,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: InteractiveViewer(
+                                panEnabled: true,
+                                minScale: 1.0,
+                                maxScale: 4.0,
+                                child: Image.network(
+                                  review.urlImagen!,
+                                  fit: BoxFit.contain,
+                                  loadingBuilder: (context, child, progress) {
+                                    if (progress == null) return child;
+                                    return SizedBox(
+                                      height: 240,
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                          value: progress.expectedTotalBytes != null
+                                              ? progress.cumulativeBytesLoaded /
+                                                    (progress.expectedTotalBytes ??
+                                                        1)
+                                              : null,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
+                                        height: 240,
+                                        color: Colors.grey[300],
+                                        child: const Icon(
+                                          Icons.image_not_supported,
+                                        ),
+                                      ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       );
                     },
-                  );
-                },
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: Image.network(
-                    review.urlImagen!,
-                    height: 120,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      height: 120,
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.image_not_supported),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.network(
+                        review.urlImagen!,
+                        height: 120,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          height: 120,
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.image_not_supported),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-          // Acciones inferiores y fecha
-          Row(
-            children: [
-              if (isSuperadmin)
-                Container(
-                  margin: const EdgeInsets.only(right: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(
-                      AppColors.errorRed,
-                    ).withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(
-                        AppColors.errorRed,
-                      ).withValues(alpha: 0.28),
-                      width: 1,
-                    ),
-                  ),
-                  child: IconButton(
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.all(2),
-                    constraints: const BoxConstraints(
-                      minWidth: 28,
-                      minHeight: 28,
-                    ),
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      size: 18,
-                      color: Color(AppColors.errorRed),
-                    ),
-                    onPressed: () => _confirmDeleteReview(review),
-                  ),
-                ),
-              const Spacer(),
+              // Fecha
               Text(
                 timeAgo,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -881,6 +915,34 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
               ),
             ],
           ),
+          // Botón eliminar en esquina inferior derecha
+          if (isSuperadmin)
+            Positioned(
+              bottom: 8,
+              right: 8,
+              child: GestureDetector(
+                onTap: () => _confirmDeleteReview(review),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(AppColors.errorRed),
+                    borderRadius: BorderRadius.circular(6),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(6),
+                  child: const Icon(
+                    Icons.delete_outline,
+                    color: Color(AppColors.white),
+                    size: 18,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
