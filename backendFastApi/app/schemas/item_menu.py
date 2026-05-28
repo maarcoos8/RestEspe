@@ -8,7 +8,7 @@ class ItemMenuBase(BaseModel):
     descripcion: Optional[str] = None
     precio: float
     id_establecimiento: int
-    id_tipo_item_menu: int
+    id_tipo_item_menu: Optional[int] = None
 
 
 class ItemMenuCreate(ItemMenuBase):

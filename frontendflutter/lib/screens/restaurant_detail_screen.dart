@@ -8,8 +8,11 @@ import '../core/constants.dart';
 import '../core/role_constants.dart';
 import '../data/models/restaurant_detail_model.dart';
 import '../data/models/review_model.dart';
+import '../data/models/item_menu_model.dart';
+import '../data/models/tipo_item_menu_model.dart';
 import '../data/services/restaurant_detail_service.dart';
 import '../data/services/review_service.dart';
+import '../data/services/menu_service.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/establishment_actions_buttons.dart';
 import '../widgets/favorite_button.dart';
@@ -50,6 +53,13 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   final ScrollController _reviewScrollController = ScrollController();
   final ScrollController _mainScrollController = ScrollController();
   late Widget _galleryWidget;
+  
+  // Variables para el menú
+  List<TipoItemMenu> _secciones = [];
+  List<ItemMenu> _platos = [];
+  bool _isLoadingMenu = false;
+  String? _errorMenu;
+  final Set<int> _expandedSections = {};
 
   @override
   void initState() {
@@ -60,6 +70,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       idEstablecimiento: widget.restaurant.idEstablecimiento,
     );
     _reviewScrollController.addListener(_onReviewScroll);
+    _loadMenu();
   }
 
   @override
@@ -179,6 +190,38 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       if (mounted) {
         setState(() {
           _isReloading = false;
+        });
+      }
+    }
+  }
+
+  /// Carga el menú del establecimiento
+  Future<void> _loadMenu() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoadingMenu = true;
+      _errorMenu = null;
+    });
+
+    try {
+      final secciones =
+          await MenuService.getSecciones(_currentRestaurant.idEstablecimiento);
+      final platos =
+          await MenuService.getPlatos(_currentRestaurant.idEstablecimiento);
+
+      if (mounted) {
+        setState(() {
+          _secciones = secciones;
+          _platos = platos;
+          _isLoadingMenu = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMenu = e.toString().replaceFirst('Exception: ', '');
+          _isLoadingMenu = false;
         });
       }
     }
@@ -596,39 +639,12 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     );
   }
 
-  Widget _buildTabContent() {
-    switch (_selectedTab) {
-      case 'resenas':
-        return _buildReviewsSection();
-      case 'imagenes':
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
-          child: _galleryWidget,
-        );
-      case 'menu':
-      default:
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          child: Text(
-            'sección menú',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        );
-    }
-  }
-
   Widget _buildTabContentWithIndexedStack() {
     return IndexedStack(
       index: _getTabIndex(),
       children: [
         // Tab 0: Menú
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          child: Text(
-            'sección menú',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ),
+        _buildMenuSection(),
         // Tab 1: Reseñas
         _buildReviewsSection(),
         // Tab 2: Imágenes
@@ -637,6 +653,328 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           child: _galleryWidget,
         ),
       ],
+    );
+  }
+
+  Widget _buildMenuSection() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUser = authProvider.currentUser;
+    final isOwner = currentUser?.idUsuario == _currentRestaurant.propietarioId;
+    final isAdmin = RoleConstants.isAdmin(currentUser?.idRol);
+    final canCreateMenuItems = isOwner || isAdmin;
+
+    if (_isLoadingMenu) {
+      return const Padding(
+        padding: EdgeInsets.fromLTRB(24, 16, 24, 24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_errorMenu != null) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        child: Center(
+          child: Text(
+            'Error al cargar el menú: $_errorMenu',
+            style: Theme.of(context)
+                .textTheme
+                .bodySmall
+                ?.copyWith(color: const Color(AppColors.errorRed)),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Botones de crear sección y crear plato (solo para propietario/admin/superadmin)
+          if (canCreateMenuItems)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final result = await _showCrearSeccionDialog();
+                        if (result != null) {
+                          await _loadMenu();
+                        }
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Crear sección'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            const Color(AppColors.primaryOrange),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final result = await _showCrearPlatoDialog();
+                        if (result != null) {
+                          await _loadMenu();
+                        }
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Crear plato'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            const Color(AppColors.primaryOrange),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          // Secciones de menú ordenadas por creación
+          if (_secciones.isEmpty && _platos.isEmpty)
+            Center(
+              child: Text(
+                'No hay platos disponibles',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: const Color(AppColors.lightText)),
+              ),
+            )
+          else ...[
+            // Mostrar secciones con sus platos
+            ..._secciones.asMap().entries.map((entry) {
+              final seccion = entry.value;
+              final platosDeLaSeccion = _platos
+                  .where((p) => p.idTipoItemMenu == seccion.idTipoItem)
+                  .toList();
+              final isExpanded =
+                  _expandedSections.contains(seccion.idTipoItem);
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildSeccionDesplegable(
+                  seccion: seccion,
+                  platos: platosDeLaSeccion,
+                  isExpanded: isExpanded,
+                  onToggle: () {
+                    setState(() {
+                      if (_expandedSections.contains(seccion.idTipoItem)) {
+                        _expandedSections.remove(seccion.idTipoItem);
+                      } else {
+                        _expandedSections.add(seccion.idTipoItem);
+                      }
+                    });
+                  },
+                ),
+              );
+            }).toList(),
+            // Sección "Otros" para platos sin sección
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildOtrosDesplegable(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSeccionDesplegable({
+    required TipoItemMenu seccion,
+    required List<ItemMenu> platos,
+    required bool isExpanded,
+    required VoidCallback onToggle,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(AppColors.white),
+        border: Border.all(color: const Color(0x1F000000), width: 1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ExpansionTile(
+        initiallyExpanded: isExpanded,
+        onExpansionChanged: (_) => onToggle(),
+        title: Text(
+          seccion.nombreTipo,
+          style: Theme.of(context)
+              .textTheme
+              .titleSmall
+              ?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Text(
+          '${platos.length} plato${platos.length != 1 ? 's' : ''}',
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: const Color(AppColors.lightText)),
+        ),
+        children: platos.isEmpty
+            ? [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Sin platos en esta sección',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: const Color(AppColors.lightText)),
+                  ),
+                ),
+              ]
+            : [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: Column(
+                    children: platos
+                        .map(
+                          (plato) =>
+                              _buildPlatoCard(plato),
+                        )
+                        .toList(),
+                  ),
+                ),
+              ],
+      ),
+    );
+  }
+
+  Widget _buildOtrosDesplegable() {
+    // Platos que no pertenecen a ninguna sección (id_tipo_item_menu == null)
+    final platosOtros = _platos.where((p) {
+      return p.idTipoItemMenu == null;
+    }).toList();
+
+    final isExpanded = _expandedSections.contains(-1); // ID especial para "Otros"
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(AppColors.white),
+        border: Border.all(color: const Color(0x1F000000), width: 1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ExpansionTile(
+        initiallyExpanded: isExpanded,
+        onExpansionChanged: (_) {
+          setState(() {
+            if (_expandedSections.contains(-1)) {
+              _expandedSections.remove(-1);
+            } else {
+              _expandedSections.add(-1);
+            }
+          });
+        },
+        title: Text(
+          'Otros',
+          style: Theme.of(context)
+              .textTheme
+              .titleSmall
+              ?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        subtitle: Text(
+          '${platosOtros.length} plato${platosOtros.length != 1 ? 's' : ''}',
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: const Color(AppColors.lightText)),
+        ),
+        children: platosOtros.isEmpty
+            ? [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Sin platos sin clasificar',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: const Color(AppColors.lightText)),
+                  ),
+                ),
+              ]
+            : [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: Column(
+                    children: platosOtros
+                        .map(
+                          (plato) =>
+                              _buildPlatoCard(plato),
+                        )
+                        .toList(),
+                  ),
+                ),
+              ],
+      ),
+    );
+  }
+
+  Widget _buildPlatoCard(ItemMenu plato) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(AppColors.white),
+          border: Border.all(color: const Color(0x0F000000), width: 1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Nombre (grande) + Precio (a la derecha)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    plato.nombreItemMenu,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '${plato.precio.toStringAsFixed(2)}€',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: const Color(AppColors.primaryOrange),
+                      ),
+                ),
+              ],
+            ),
+            // Descripción (pequeña)
+            if (plato.descripcion != null && plato.descripcion!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                plato.descripcion!,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: const Color(AppColors.lightText)),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -1060,6 +1398,381 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       final months = (difference.inDays / 30).floor();
       return 'hace $months ${months == 1 ? "mes" : "meses"}';
     }
+  }
+
+  /// Diálogo para crear una nueva sección
+  Future<String?> _showCrearSeccionDialog() async {
+    final TextEditingController nombreController = TextEditingController();
+    bool isLoading = false;
+
+    return showDialog<String?>(
+      context: this.context,
+      builder: (BuildContext ctx) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: const Color(AppColors.white),
+              title: Text(
+                'Crear sección',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: const Color(AppColors.darkText),
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nombreController,
+                    decoration: InputDecoration(
+                      hintText: 'Nombre de la sección',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
+                    onChanged: (_) {
+                      setState(() {});
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () {
+                          Navigator.of(context).pop();
+                        },
+                  child: Text(
+                    'Cancelar',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: const Color(AppColors.lightText),
+                        ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: isLoading || nombreController.text.trim().isEmpty
+                      ? null
+                      : () async {
+                          setState(() {
+                            isLoading = true;
+                          });
+
+                          try {
+                            final nombreSeccion = nombreController.text.trim();
+                            await MenuService.crearSeccion(
+                              _currentRestaurant.idEstablecimiento,
+                              nombreSeccion,
+                            );
+
+                            if (this.mounted) {
+                              // Mostrar SnackBar ANTES de cerrar el dialog
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '"$nombreSeccion" ha sido creado',
+                                  ),
+                                  backgroundColor:
+                                      const Color(AppColors.successGreen),
+                                ),
+                              );
+                              // Cerrar el dialog después
+                              Navigator.of(ctx).pop(nombreSeccion);
+                            }
+                          } catch (e) {
+                            if (this.mounted) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Error al crear sección: ${e.toString().replaceFirst('Exception: ', '')}',
+                                  ),
+                                  backgroundColor: const Color(AppColors.errorRed),
+                                ),
+                              );
+                              setState(() {
+                                isLoading = false;
+                              });
+                            }
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(AppColors.primaryOrange),
+                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text('Guardar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// Diálogo para crear un nuevo plato
+  Future<ItemMenu?> _showCrearPlatoDialog() async {
+    final TextEditingController nombreController = TextEditingController();
+    final TextEditingController descripcionController =
+        TextEditingController();
+    final TextEditingController precioController = TextEditingController();
+    int? seccionSeleccionada;
+    bool isLoading = false;
+    bool hasUnsavedChanges = false;
+
+    return showDialog<ItemMenu?>(
+      context: this.context,
+      barrierDismissible: false,
+      builder: (BuildContext ctx) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            void updateUnsavedChanges() {
+              setState(() {
+                hasUnsavedChanges = nombreController.text.isNotEmpty ||
+                    descripcionController.text.isNotEmpty ||
+                    precioController.text.isNotEmpty;
+              });
+            }
+
+            Future<void> handleCancel() async {
+              if (hasUnsavedChanges) {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (dialogCtx) => AlertDialog(
+                    backgroundColor: const Color(AppColors.white),
+                    title: const Text('¿Descartar cambios?'),
+                    content: const Text(
+                      'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogCtx).pop(false),
+                        child: const Text('Seguir editando'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogCtx).pop(true),
+                        child: const Text('Descartar'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm ?? false) {
+                    Navigator.of(context).pop();
+                }
+              } else {
+                  Navigator.of(context).pop();
+              }
+            }
+
+            return AlertDialog(
+                backgroundColor: const Color(AppColors.white),
+                title: Text(
+                  'Crear plato',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: const Color(AppColors.darkText),
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Nombre
+                      TextField(
+                        controller: nombreController,
+                        decoration: InputDecoration(
+                          labelText: 'Nombre del plato *',
+                          hintText: 'Ej: Pizza Margherita',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                        onChanged: (_) => updateUnsavedChanges(),
+                      ),
+                      const SizedBox(height: 12),
+                      // Descripción
+                      TextField(
+                        controller: descripcionController,
+                        decoration: InputDecoration(
+                          labelText: 'Descripción',
+                          hintText: 'Ej: Con mozzarella y albahaca',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                        maxLines: 3,
+                        onChanged: (_) => updateUnsavedChanges(),
+                      ),
+                      const SizedBox(height: 12),
+                      // Precio
+                      TextField(
+                        controller: precioController,
+                        decoration: InputDecoration(
+                          labelText: 'Precio (€) *',
+                          hintText: '9.99',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          suffixText: '€',
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        onChanged: (_) => updateUnsavedChanges(),
+                      ),
+                      const SizedBox(height: 12),
+                      // Sección (desplegable)
+                      DropdownButtonFormField<int?>(
+                        initialValue: seccionSeleccionada,
+                        decoration: InputDecoration(
+                          labelText: 'Sección *',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                        items: [
+                          // Opción "Otros" (sin sección)
+                          const DropdownMenuItem<int?>(
+                            value: null,
+                            child: Text('Otros (sin sección)'),
+                          ),
+                          // Secciones existentes
+                          ..._secciones.map((seccion) {
+                            return DropdownMenuItem<int?>(
+                              value: seccion.idTipoItem,
+                              child: Text(seccion.nombreTipo),
+                            );
+                          }),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            seccionSeleccionada = value;
+                            hasUnsavedChanges = true;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: isLoading ? null : handleCancel,
+                    child: Text(
+                      'Cancelar',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: const Color(AppColors.lightText),
+                          ),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: isLoading ||
+                            nombreController.text.trim().isEmpty ||
+                            precioController.text.trim().isEmpty
+                        ? null
+                        : () async {
+                            setState(() {
+                              isLoading = true;
+                            });
+
+                            try {
+                              final precio =
+                                  double.parse(precioController.text.trim());
+                              final nombrePlato = nombreController.text.trim();
+                              final nuevoPlato =
+                                  await MenuService.crearPlato(
+                                _currentRestaurant.idEstablecimiento,
+                                nombrePlato,
+                                precio,
+                                seccionSeleccionada,
+                                descripcion: descripcionController.text
+                                        .trim()
+                                        .isEmpty
+                                    ? null
+                                    : descripcionController.text.trim(),
+                              );
+
+                              if (this.mounted) {
+                                // Mostrar SnackBar ANTES de cerrar el dialog
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      '"$nombrePlato" ha sido creado',
+                                    ),
+                                    backgroundColor:
+                                        const Color(AppColors.successGreen),
+                                  ),
+                                );
+                                // Cerrar el dialog después
+                                Navigator.of(ctx).pop(nuevoPlato);
+                              }
+                            } catch (e) {
+                              if (this.mounted) {
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Error al crear plato: ${e.toString().replaceFirst('Exception: ', '')}',
+                                    ),
+                                    backgroundColor:
+                                        const Color(AppColors.errorRed),
+                                  ),
+                                );
+                                setState(() {
+                                  isLoading = false;
+                                });
+                              }
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(AppColors.primaryOrange),
+                    ),
+                    child: isLoading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : const Text('Guardar'),
+                  ),
+                ],
+              );
+          },
+        );
+      },
+    );
   }
 }
 

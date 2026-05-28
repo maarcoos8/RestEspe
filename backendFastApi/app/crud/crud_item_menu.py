@@ -23,11 +23,13 @@ def get_items_menu_por_establecimiento(db: Session, id_establecimiento: int) -> 
 def create_item_menu(db: Session, item_in: ItemMenuCreate) -> ItemMenu:
     if not db.query(Establecimiento).filter(Establecimiento.id_establecimiento == item_in.id_establecimiento).first():
         raise ValueError("Establecimiento no encontrado")
-    tipo_item = db.query(TipoItemMenu).filter(TipoItemMenu.id_tipo_item == item_in.id_tipo_item_menu).first()
-    if not tipo_item:
-        raise ValueError("Tipo item menu no encontrado")
-    if tipo_item.id_establecimiento != item_in.id_establecimiento:
-        raise ValueError("El id_establecimiento del item_menu debe coincidir con el del tipo_item_menu")
+
+    if item_in.id_tipo_item_menu is not None:
+        tipo_item = db.query(TipoItemMenu).filter(TipoItemMenu.id_tipo_item == item_in.id_tipo_item_menu).first()
+        if not tipo_item:
+            raise ValueError("Tipo item menu no encontrado")
+        if tipo_item.id_establecimiento != item_in.id_establecimiento:
+            raise ValueError("El id_establecimiento del item_menu debe coincidir con el del tipo_item_menu")
 
     data = item_in.model_dump(exclude_unset=True)
     db_obj = ItemMenu(**data)
@@ -44,14 +46,15 @@ def update_item_menu(db: Session, db_obj: ItemMenu, item_in: ItemMenuUpdate) -> 
         if not db.query(Establecimiento).filter(Establecimiento.id_establecimiento == data["id_establecimiento"]).first():
             raise ValueError("Establecimiento no encontrado")
 
-    tipo_item_id = data.get("id_tipo_item_menu", db_obj.id_tipo_item_menu)
-    tipo_item = db.query(TipoItemMenu).filter(TipoItemMenu.id_tipo_item == tipo_item_id).first()
-    if not tipo_item:
-        raise ValueError("Tipo item menu no encontrado")
+    if "id_tipo_item_menu" in data and data["id_tipo_item_menu"] is not None:
+        tipo_item_id = data["id_tipo_item_menu"]
+        tipo_item = db.query(TipoItemMenu).filter(TipoItemMenu.id_tipo_item == tipo_item_id).first()
+        if not tipo_item:
+            raise ValueError("Tipo item menu no encontrado")
 
-    establecimiento_id = data.get("id_establecimiento", db_obj.id_establecimiento)
-    if tipo_item.id_establecimiento != establecimiento_id:
-        raise ValueError("El id_establecimiento del item_menu debe coincidir con el del tipo_item_menu")
+        establecimiento_id = data.get("id_establecimiento", db_obj.id_establecimiento)
+        if tipo_item.id_establecimiento != establecimiento_id:
+            raise ValueError("El id_establecimiento del item_menu debe coincidir con el del tipo_item_menu")
 
     for field, value in data.items():
         setattr(db_obj, field, value)
