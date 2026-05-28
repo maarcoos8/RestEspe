@@ -1,8 +1,11 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
+
+import '../../core/constants.dart';
+import '../models/categoria_dieta_model.dart';
 import '../models/item_menu_model.dart';
 import '../models/tipo_item_menu_model.dart';
-import '../../core/constants.dart';
 
 /// Servicio para obtener datos del menú del establecimiento.
 class MenuService {
@@ -15,23 +18,16 @@ class MenuService {
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {
-        try {
-          final List<dynamic> jsonList =
-              jsonDecode(response.body) as List<dynamic>;
-          return jsonList
-              .map((json) =>
-                  TipoItemMenu.fromJson(json as Map<String, dynamic>))
-              .toList();
-        } catch (parseError) {
-          throw Exception(
-            'Error al parsear secciones: $parseError. Respuesta: ${response.body}',
-          );
-        }
-      } else {
-        throw Exception(
-          'Error al obtener secciones del menú: ${response.statusCode} - ${response.body}',
-        );
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        return jsonList
+            .map((json) => TipoItemMenu.fromJson(json as Map<String, dynamic>))
+            .toList();
       }
+
+      throw Exception(
+        'Error al obtener secciones del menú: ${response.statusCode} - ${response.body}',
+      );
     } catch (e) {
       throw Exception('Error al obtener secciones del menú: $e');
     }
@@ -46,23 +42,16 @@ class MenuService {
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {
-        try {
-          final List<dynamic> jsonList =
-              jsonDecode(response.body) as List<dynamic>;
-          return jsonList
-              .map((json) =>
-                  ItemMenu.fromJson(json as Map<String, dynamic>))
-              .toList();
-        } catch (parseError) {
-          throw Exception(
-            'Error al parsear platos: $parseError. Respuesta: ${response.body}',
-          );
-        }
-      } else {
-        throw Exception(
-          'Error al obtener platos: ${response.statusCode} - ${response.body}',
-        );
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        return jsonList
+            .map((json) => ItemMenu.fromJson(json as Map<String, dynamic>))
+            .toList();
       }
+
+      throw Exception(
+        'Error al obtener platos: ${response.statusCode} - ${response.body}',
+      );
     } catch (e) {
       throw Exception('Error al obtener platos: $e');
     }
@@ -95,17 +84,101 @@ class MenuService {
       );
 
       if (response.statusCode == 201) {
-        try {
-          final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
-          return TipoItemMenu.fromJson(jsonData);
-        } catch (e) {
-          throw Exception('Error al parsear respuesta del servidor: $e. Respuesta: ${response.body}');
-        }
-      } else {
-        throw Exception('Error al crear sección: ${response.statusCode} - ${response.body}');
+        final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
+        return TipoItemMenu.fromJson(jsonData);
       }
+
+      throw Exception(
+        'Error al crear sección: ${response.statusCode} - ${response.body}',
+      );
     } catch (e) {
       throw Exception('Error al crear sección: $e');
+    }
+  }
+
+  /// Actualiza una sección existente.
+  static Future<TipoItemMenu> actualizarSeccion(
+    int idTipoItem,
+    String nombreTipo,
+  ) async {
+    try {
+      final uri = Uri.parse(
+        '${AppConstants.apiBaseUrl}/tipo_item_menu/$idTipoItem',
+      );
+      final response = await http.put(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'nombre_tipo': nombreTipo}),
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
+        return TipoItemMenu.fromJson(jsonData);
+      }
+
+      throw Exception(
+        'Error al actualizar sección: ${response.statusCode} - ${response.body}',
+      );
+    } catch (e) {
+      throw Exception('Error al actualizar sección: $e');
+    }
+  }
+
+  /// Elimina una sección.
+  static Future<void> eliminarSeccion(int idTipoItem) async {
+    try {
+      final uri = Uri.parse(
+        '${AppConstants.apiBaseUrl}/tipo_item_menu/$idTipoItem',
+      );
+      final response = await http.delete(uri);
+      if (response.statusCode == 200) return;
+
+      throw Exception(
+        'Error al eliminar sección: ${response.statusCode} - ${response.body}',
+      );
+    } catch (e) {
+      throw Exception('Error al eliminar sección: $e');
+    }
+  }
+
+  /// Elimina un plato por id.
+  static Future<void> eliminarPlato(int idItem) async {
+    try {
+      final uri = Uri.parse('${AppConstants.apiBaseUrl}/item_menu/$idItem');
+      final response = await http.delete(uri);
+      if (response.statusCode == 200) return;
+
+      throw Exception(
+        'Error al eliminar plato: ${response.statusCode} - ${response.body}',
+      );
+    } catch (e) {
+      throw Exception('Error al eliminar plato: $e');
+    }
+  }
+
+  /// Actualiza un plato (partial update).
+  static Future<ItemMenu> actualizarPlato(
+    int idItem,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final uri = Uri.parse('${AppConstants.apiBaseUrl}/item_menu/$idItem');
+      final response = await http.put(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(data),
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
+        return ItemMenu.fromJson(jsonData);
+      }
+
+      throw Exception(
+        'Error al actualizar plato: ${response.statusCode} - ${response.body}',
+      );
+    } catch (e) {
+      throw Exception('Error al actualizar plato: $e');
     }
   }
 
@@ -116,6 +189,7 @@ class MenuService {
     double precio,
     int? idTipoItemMenu, {
     String? descripcion,
+    List<int>? idCategorias,
   }) async {
     try {
       final uri = Uri.parse('${AppConstants.apiBaseUrl}/item_menu/');
@@ -128,21 +202,42 @@ class MenuService {
           'descripcion': descripcion,
           'precio': precio,
           'id_tipo_item_menu': idTipoItemMenu,
+          'id_categorias': idCategorias,
         }),
       );
 
       if (response.statusCode == 201) {
-        try {
-          final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
-          return ItemMenu.fromJson(jsonData);
-        } catch (e) {
-          throw Exception('Error al parsear respuesta del servidor: $e. Respuesta: ${response.body}');
-        }
-      } else {
-        throw Exception('Error al crear plato: ${response.statusCode} - ${response.body}');
+        final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
+        return ItemMenu.fromJson(jsonData);
       }
+
+      throw Exception(
+        'Error al crear plato: ${response.statusCode} - ${response.body}',
+      );
     } catch (e) {
       throw Exception('Error al crear plato: $e');
+    }
+  }
+
+  /// Obtiene todas las categorias de dieta existentes.
+  static Future<List<CategoriaDieta>> getCategorias() async {
+    try {
+      final uri = Uri.parse('${AppConstants.apiBaseUrl}/categoria_dieta/');
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        return jsonList
+            .map((json) => CategoriaDieta.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+
+      throw Exception(
+        'Error al obtener categorias: ${response.statusCode} - ${response.body}',
+      );
+    } catch (e) {
+      throw Exception('Error al obtener categorias: $e');
     }
   }
 }

@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -13,6 +13,7 @@ import '../data/models/tipo_item_menu_model.dart';
 import '../data/services/restaurant_detail_service.dart';
 import '../data/services/review_service.dart';
 import '../data/services/menu_service.dart';
+import '../providers/restaurant_detail_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/establishment_actions_buttons.dart';
 import '../widgets/favorite_button.dart';
@@ -20,10 +21,10 @@ import '../widgets/scaffold_with_nav.dart';
 import '../widgets/establishment_gallery_widget.dart';
 import 'review_creation_dialog.dart';
 
-/// Pantalla de detalle básico de un restaurante.
+/// Pantalla de detalle b+ísico de un restaurante.
 ///
-/// Muestra imagen, nombre, dirección, tipos de establecimiento,
-/// opciones dietéticas, puntuación y botón de favorito.
+/// Muestra imagen, nombre, direcci+¦n, tipos de establecimiento,
+/// opciones diet+®ticas, puntuaci+¦n y bot+¦n de favorito.
 class RestaurantDetailScreen extends StatefulWidget {
   const RestaurantDetailScreen({
     super.key,
@@ -44,7 +45,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       RestaurantDetailService();
   final ReviewService _reviewService = ReviewService();
   bool _isReloading = false;
-  bool _wasEdited = false; // Bandera para rastrear si se editó
+  bool _wasEdited = false; // Bandera para rastrear si se edit+¦
   String _selectedTab = 'menu'; // 'menu', 'resenas', 'imagenes'
   List<ReviewModel> _reviews = [];
   int _reviewSkip = 0;
@@ -54,7 +55,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   final ScrollController _mainScrollController = ScrollController();
   late Widget _galleryWidget;
   
-  // Variables para el menú
+  // Variables para el men+¦
   List<TipoItemMenu> _secciones = [];
   List<ItemMenu> _platos = [];
   bool _isLoadingMenu = false;
@@ -91,17 +92,17 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     super.dispose();
   }
 
-  /// Carga más reseñas al hacer scroll
+  /// Carga m+ís rese+¦as al hacer scroll
   void _onReviewScroll() {
     if (_reviewScrollController.position.pixels >=
-            _reviewScrollController.position.maxScrollExtent - 200 &&
+      _reviewScrollController.position.maxScrollExtent - 200 &&
         !_isLoadingReviews &&
         _hasMoreReviews) {
       _loadMoreReviews();
     }
   }
 
-  /// Carga reseñas iniciales
+  /// Carga rese+¦as iniciales
   Future<void> _loadInitialReviews() async {
     if (_isLoadingReviews) return;
 
@@ -136,7 +137,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     }
   }
 
-  /// Carga más reseñas (infinite scroll)
+  /// Carga m+ís rese+¦as (infinite scroll)
   Future<void> _loadMoreReviews() async {
     setState(() {
       _isLoadingReviews = true;
@@ -181,7 +182,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       if (mounted && updatedRestaurant != null) {
         setState(() {
           _currentRestaurant = updatedRestaurant;
-          _wasEdited = true; // Marcar que se editó exitosamente
+          _wasEdited = true; // Marcar que se edit+¦ exitosamente
         });
       }
     } catch (e) {
@@ -195,7 +196,19 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     }
   }
 
-  /// Carga el menú del establecimiento
+  /// Recarga el detalle del restaurante y el menú tras una mutación.
+  Future<void> _refreshAfterMenuMutation() async {
+    await _reloadRestaurantData();
+    if (!mounted) return;
+
+    context
+        .read<RestaurantDetailProvider>()
+        .clearRestaurantCache(_currentRestaurant.idEstablecimiento);
+
+    await _loadMenu();
+  }
+
+  /// Carga el men+¦ del establecimiento
   Future<void> _loadMenu() async {
     if (!mounted) return;
 
@@ -235,7 +248,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     } else if (hex.length == 8) {
       return Color(int.parse(hex, radix: 16));
     }
-    // Color por defecto si el formato es inválido
+    // Color por defecto si el formato es inv+ílido
     return Color(int.parse('ffFF6B6B', radix: 16));
   }
 
@@ -290,22 +303,22 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return; // Si ya se removió, no hacer nada
+        if (didPop) return; // Si ya se removi+¦, no hacer nada
 
-        // Si se volvió de editar (result == true), recargar los datos
+        // Si se volvi+¦ de editar (result == true), recargar los datos
         if (result == true) {
           _reloadRestaurantData();
           return; // No salir, permitir continuar viendo los datos actualizados
         }
 
-        // Si se está intentando salir y se editó, propagar el resultado
+        // Si se est+í intentando salir y se edit+¦, propagar el resultado
         if (_wasEdited) {
           Navigator.of(context).pop(true);
         }
       },
       child: ScaffoldWithNav(
         title: 'Detalle del establecimiento',
-        currentIndex: -1, // Ninguna pestaña seleccionada cuando estamos en el detalle
+        currentIndex: -1, // Ninguna pesta+¦a seleccionada cuando estamos en el detalle
         body: _buildScrollableView(),
       ),
     );
@@ -380,7 +393,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                                               _currentRestaurant.direccionTexto!
                                                   .trim()
                                                   .isEmpty)
-                                          ? 'Dirección no disponible'
+                                          ? 'Direcci+¦n no disponible'
                                           : _currentRestaurant.direccionTexto!,
                                       style: Theme.of(context)
                                           .textTheme
@@ -439,7 +452,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                             Text(
                               _currentRestaurant.tiposEstablecimiento
                                   .map((tipo) => tipo.nombreCategoria)
-                                  .join(' · '),
+                                  .join(' • '),
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           const SizedBox(height: 18),
@@ -575,7 +588,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                   ),
                 ],
               ),
-              // Menú de secciones: Menú, Reseñas, Imágenes
+              // Men+¦ de secciones: Men+¦, Rese+¦as, Im+ígenes
               Container(
                 color: const Color(AppColors.white),
                 padding: const EdgeInsets.symmetric(
@@ -593,7 +606,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                 ),
               ),
               Container(height: 1, color: const Color(0x1F000000)),
-              // Contenido de la sección seleccionada
+              // Contenido de la secci+¦n seleccionada
               Container(
                 color: const Color(AppColors.background),
                 child: _buildTabContentWithIndexedStack(),
@@ -611,7 +624,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           _selectedTab = tabValue;
         });
         
-        // Cargar reseñas si se selecciona la pestaña de reseñas
+        // Cargar rese+¦as si se selecciona la pesta+¦a de rese+¦as
         if (tabValue == 'resenas' && _reviews.isEmpty) {
           _loadInitialReviews();
         }
@@ -643,11 +656,11 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     return IndexedStack(
       index: _getTabIndex(),
       children: [
-        // Tab 0: Menú
+        // Tab 0: Men+¦
         _buildMenuSection(),
-        // Tab 1: Reseñas
+        // Tab 1: Rese+¦as
         _buildReviewsSection(),
-        // Tab 2: Imágenes
+        // Tab 2: Im+ígenes
         Padding(
           padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
           child: _galleryWidget,
@@ -690,7 +703,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Botones de crear sección y crear plato (solo para propietario/admin/superadmin)
+          // Botones de crear secci+¦n y crear plato (solo para propietario/admin/superadmin)
           if (canCreateMenuItems)
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
@@ -701,7 +714,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                       onPressed: () async {
                         final result = await _showCrearSeccionDialog();
                         if (result != null) {
-                          await _loadMenu();
+                          await _refreshAfterMenuMutation();
                         }
                       },
                       icon: const Icon(Icons.add),
@@ -723,7 +736,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                       onPressed: () async {
                         final result = await _showCrearPlatoDialog();
                         if (result != null) {
-                          await _loadMenu();
+                          await _refreshAfterMenuMutation();
                         }
                       },
                       icon: const Icon(Icons.add),
@@ -798,6 +811,12 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     required bool isExpanded,
     required VoidCallback onToggle,
   }) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUser = authProvider.currentUser;
+    final canManage = currentUser != null &&
+        (RoleConstants.isAdmin(currentUser.idRol) ||
+            currentUser.idUsuario == _currentRestaurant.propietarioId);
+
     return Container(
       decoration: BoxDecoration(
         color: const Color(AppColors.white),
@@ -807,6 +826,16 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       child: ExpansionTile(
         initiallyExpanded: isExpanded,
         onExpansionChanged: (_) => onToggle(),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+        childrenPadding: EdgeInsets.zero,
+        shape: const RoundedRectangleBorder(
+          side: BorderSide.none,
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+        ),
+        collapsedShape: const RoundedRectangleBorder(
+          side: BorderSide.none,
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+        ),
         title: Text(
           seccion.nombreTipo,
           style: Theme.of(context)
@@ -820,6 +849,97 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
               .textTheme
               .bodySmall
               ?.copyWith(color: const Color(AppColors.lightText)),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (canManage) ...[
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                splashRadius: 18,
+                icon: const Icon(
+                  Icons.edit_outlined,
+                  size: 18,
+                  color: Color(AppColors.primaryBlue),
+                ),
+                onPressed: () async {
+                  final result = await _showCrearSeccionDialog(seccion: seccion);
+                  if (result != null) {
+                    await _refreshAfterMenuMutation();
+                  }
+                },
+              ),
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                splashRadius: 18,
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 18,
+                  color: Color(AppColors.errorRed),
+                ),
+                onPressed: () async {
+                  final shouldDeletePlatos = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) {
+                      return AlertDialog(
+                        title: Text('Eliminar sección "${seccion.nombreTipo}"'),
+                        content: const Text(
+                          '¿Deseas eliminar también los platos dentro de esta sección?\n\nSi eliges "Sí", se borrarán los platos. Si eliges "No", los platos pasarán a la sección "Otros".',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(null),
+                            child: const Text('Cancelar'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(false),
+                            child: const Text('No'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(true),
+                            style: TextButton.styleFrom(
+                              foregroundColor: const Color(AppColors.errorRed),
+                            ),
+                            child: const Text('Sí'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+
+                  if (shouldDeletePlatos == null) return;
+
+                  try {
+                    if (shouldDeletePlatos) {
+                      for (final plato in platos) {
+                        await MenuService.eliminarPlato(plato.idItemMenu);
+                      }
+                    } else {
+                      for (final plato in platos) {
+                        await MenuService.actualizarPlato(
+                          plato.idItemMenu,
+                          {'id_tipo_item_menu': null},
+                        );
+                      }
+                    }
+
+                    await MenuService.eliminarSeccion(seccion.idTipoItem);
+                    await _refreshAfterMenuMutation();
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error al eliminar sección: ${e.toString()}'),
+                        backgroundColor: const Color(AppColors.errorRed),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
+            Icon(isExpanded ? Icons.expand_less : Icons.expand_more),
+          ],
         ),
         children: platos.isEmpty
             ? [
@@ -836,7 +956,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
               ]
             : [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                   child: Column(
                     children: platos
                         .map(
@@ -876,6 +996,16 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
             }
           });
         },
+        tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+        childrenPadding: EdgeInsets.zero,
+        shape: const RoundedRectangleBorder(
+          side: BorderSide.none,
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+        ),
+        collapsedShape: const RoundedRectangleBorder(
+          side: BorderSide.none,
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+        ),
         title: Text(
           'Otros',
           style: Theme.of(context)
@@ -905,7 +1035,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
               ]
             : [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                   child: Column(
                     children: platosOtros
                         .map(
@@ -921,10 +1051,16 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   }
 
   Widget _buildPlatoCard(ItemMenu plato) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUser = authProvider.currentUser;
+    final canManage = currentUser != null &&
+        (RoleConstants.isAdmin(currentUser.idRol) ||
+            currentUser.idUsuario == _currentRestaurant.propietarioId);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
         decoration: BoxDecoration(
           color: const Color(AppColors.white),
           border: Border.all(color: const Color(0x0F000000), width: 1),
@@ -972,6 +1108,130 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
+            if (plato.categorias.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: plato.categorias
+                    .map(
+                      (categoria) => Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _hexToColor(categoria.colorHex)
+                              .withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Text(
+                          categoria.nombreDieta,
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: _hexToColor(categoria.colorHex),
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+            if (canManage) ...[
+              const SizedBox(height: 0),
+              Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints:
+                          const BoxConstraints(minWidth: 22, minHeight: 22),
+                      splashRadius: 12,
+                      icon: const Icon(
+                        Icons.edit_outlined,
+                        size: 15,
+                        color: Color(AppColors.primaryBlue),
+                      ),
+                      onPressed: () async {
+                        final updatedPlato = await _showCrearPlatoDialog(
+                          plato: plato,
+                        );
+                        if (updatedPlato != null) {
+                          await _refreshAfterMenuMutation();
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 2),
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints:
+                          const BoxConstraints(minWidth: 22, minHeight: 22),
+                      splashRadius: 12,
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        size: 15,
+                        color: Color(AppColors.errorRed),
+                      ),
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) {
+                            return AlertDialog(
+                              title: const Text('Eliminar plato'),
+                              content: Text(
+                                '¿Seguro que quieres eliminar "${plato.nombreItemMenu}"? Esta acción no se puede deshacer.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(false),
+                                  child: const Text('Cancelar'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(true),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor:
+                                        const Color(AppColors.errorRed),
+                                  ),
+                                  child: const Text('Eliminar'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+
+                        if (confirm != true) return;
+
+                        try {
+                          await MenuService.eliminarPlato(plato.idItemMenu);
+                          await _refreshAfterMenuMutation();
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Plato eliminado'),
+                                backgroundColor: Color(AppColors.successGreen),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Error al eliminar plato: ${e.toString().replaceFirst('Exception: ', '')}',
+                                ),
+                                backgroundColor:
+                                    const Color(AppColors.errorRed),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1015,7 +1275,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                       onReviewCreated: (review) {
                         setState(() {
                           _reviews.insert(0, review);
-                          // Actualizar puntuación media y contador localmente
+                          // Actualizar puntuaci+¦n media y contador localmente
                           final oldAvg =
                               _currentRestaurant.puntuacionMedia ?? 0.0;
                           final oldCount = _currentRestaurant.numeroResenas;
@@ -1057,7 +1317,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
               ),
             ),
           ),
-        // Lista de reseñas con infinite scroll
+        // Lista de rese+¦as con infinite scroll
         if (_reviews.isEmpty && !_isLoadingReviews)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
@@ -1072,7 +1332,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           )
         else
           SizedBox(
-            height: 400, // Altura fija para la lista de reseñas
+            height: 400, // Altura fija para la lista de rese+¦as
             child: ListView.separated(
               controller: _reviewScrollController,
               itemCount: _reviews.length + (_isLoadingReviews ? 1 : 0),
@@ -1253,7 +1513,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
               ),
             ],
           ),
-          // Botón eliminar en esquina inferior derecha
+          // Bot+¦n eliminar en esquina inferior derecha
           if (isSuperadmin)
             Positioned(
               bottom: 8,
@@ -1400,10 +1660,13 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     }
   }
 
-  /// Diálogo para crear una nueva sección
-  Future<String?> _showCrearSeccionDialog() async {
-    final TextEditingController nombreController = TextEditingController();
+  /// Diálogo para crear o editar una sección
+  Future<String?> _showCrearSeccionDialog({TipoItemMenu? seccion}) async {
+    final TextEditingController nombreController = TextEditingController(
+      text: seccion?.nombreTipo ?? '',
+    );
     bool isLoading = false;
+    final bool isEditing = seccion != null;
 
     return showDialog<String?>(
       context: this.context,
@@ -1413,7 +1676,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
             return AlertDialog(
               backgroundColor: const Color(AppColors.white),
               title: Text(
-                'Crear sección',
+                isEditing ? 'Editar sección' : 'Crear sección',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: const Color(AppColors.darkText),
                       fontWeight: FontWeight.bold,
@@ -1464,23 +1727,33 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
 
                           try {
                             final nombreSeccion = nombreController.text.trim();
-                            await MenuService.crearSeccion(
-                              _currentRestaurant.idEstablecimiento,
-                              nombreSeccion,
-                            );
+                            final currentSeccion = seccion;
+                            if (currentSeccion != null) {
+                              await MenuService.actualizarSeccion(
+                                currentSeccion.idTipoItem,
+                                nombreSeccion,
+                              );
+                            } else {
+                              await MenuService.crearSeccion(
+                                _currentRestaurant.idEstablecimiento,
+                                nombreSeccion,
+                              );
+                            }
 
                             if (this.mounted) {
                               // Mostrar SnackBar ANTES de cerrar el dialog
                               ScaffoldMessenger.of(ctx).showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    '"$nombreSeccion" ha sido creado',
+                                    isEditing
+                                      ? '"$nombreSeccion" ha sido actualizado'
+                                      : '"$nombreSeccion" ha sido creado',
                                   ),
                                   backgroundColor:
                                       const Color(AppColors.successGreen),
                                 ),
                               );
-                              // Cerrar el dialog después
+                              // Cerrar el dialog despu+®s
                               Navigator.of(ctx).pop(nombreSeccion);
                             }
                           } catch (e) {
@@ -1488,7 +1761,9 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                               ScaffoldMessenger.of(ctx).showSnackBar(
                                 SnackBar(
                                   content: Text(
-                                    'Error al crear sección: ${e.toString().replaceFirst('Exception: ', '')}',
+                                    isEditing
+                                      ? 'Error al actualizar sección: ${e.toString().replaceFirst('Exception: ', '')}'
+                                      : 'Error al crear sección: ${e.toString().replaceFirst('Exception: ', '')}',
                                   ),
                                   backgroundColor: const Color(AppColors.errorRed),
                                 ),
@@ -1523,15 +1798,30 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     );
   }
 
-  /// Diálogo para crear un nuevo plato
-  Future<ItemMenu?> _showCrearPlatoDialog() async {
-    final TextEditingController nombreController = TextEditingController();
-    final TextEditingController descripcionController =
-        TextEditingController();
-    final TextEditingController precioController = TextEditingController();
-    int? seccionSeleccionada;
+  /// Diálogo para crear o editar un plato
+  Future<ItemMenu?> _showCrearPlatoDialog({ItemMenu? plato}) async {
+    final categoriasDisponibles = await MenuService.getCategorias();
+    final TextEditingController nombreController = TextEditingController(
+      text: plato?.nombreItemMenu ?? '',
+    );
+    final TextEditingController descripcionController = TextEditingController(
+      text: plato?.descripcion ?? '',
+    );
+    final TextEditingController precioController = TextEditingController(
+      text: plato != null ? plato.precio.toStringAsFixed(2) : '',
+    );
+    int? seccionSeleccionada = plato?.idTipoItemMenu;
     bool isLoading = false;
     bool hasUnsavedChanges = false;
+    final bool isEditing = plato != null;
+    final Set<int> categoriasSeleccionadas = {
+      ...?plato?.categorias.map((categoria) => categoria.idCategoria),
+    };
+    final Set<int> categoriasIniciales = Set<int>.from(categoriasSeleccionadas);
+    final String precioInicial = plato != null ? plato.precio.toStringAsFixed(2) : '';
+    final String nombreInicial = plato?.nombreItemMenu ?? '';
+    final String descripcionInicial = plato?.descripcion ?? '';
+    final int? seccionInicial = plato?.idTipoItemMenu;
 
     return showDialog<ItemMenu?>(
       context: this.context,
@@ -1541,9 +1831,12 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           builder: (context, setState) {
             void updateUnsavedChanges() {
               setState(() {
-                hasUnsavedChanges = nombreController.text.isNotEmpty ||
-                    descripcionController.text.isNotEmpty ||
-                    precioController.text.isNotEmpty;
+                hasUnsavedChanges = nombreController.text.trim() != nombreInicial ||
+                    descripcionController.text.trim() != descripcionInicial ||
+                    precioController.text.trim() != precioInicial ||
+                    seccionSeleccionada != seccionInicial ||
+                    categoriasSeleccionadas.length != categoriasIniciales.length ||
+                    !categoriasSeleccionadas.containsAll(categoriasIniciales);
               });
             }
 
@@ -1580,7 +1873,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
             return AlertDialog(
                 backgroundColor: const Color(AppColors.white),
                 title: Text(
-                  'Crear plato',
+                  isEditing ? 'Editar plato' : 'Crear plato',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: const Color(AppColors.darkText),
                         fontWeight: FontWeight.bold,
@@ -1676,10 +1969,80 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                         onChanged: (value) {
                           setState(() {
                             seccionSeleccionada = value;
-                            hasUnsavedChanges = true;
                           });
+                          updateUnsavedChanges();
                         },
                       ),
+                      const SizedBox(height: 16),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Opciones dietéticas',
+                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: const Color(AppColors.darkText),
+                              ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (categoriasDisponibles.isEmpty)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'No hay categorías dietéticas disponibles',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: const Color(AppColors.lightText),
+                                ),
+                          ),
+                        )
+                      else
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: categoriasDisponibles
+                              .map(
+                                (categoria) => FilterChip(
+                                  selected: categoriasSeleccionadas
+                                      .contains(categoria.idCategoria),
+                                  label: Text(categoria.nombreDieta),
+                                  showCheckmark: false,
+                                  selectedColor: _hexToColor(categoria.colorHex)
+                                      .withValues(alpha: 0.18),
+                                  backgroundColor: const Color(AppColors.white),
+                                  side: BorderSide(
+                                    color: categoriasSeleccionadas
+                                            .contains(categoria.idCategoria)
+                                        ? _hexToColor(categoria.colorHex)
+                                        : const Color(0x1F000000),
+                                  ),
+                                  labelStyle: Theme.of(context)
+                                      .textTheme
+                                      .labelSmall
+                                      ?.copyWith(
+                                        color: categoriasSeleccionadas
+                                                .contains(categoria.idCategoria)
+                                            ? _hexToColor(categoria.colorHex)
+                                            : const Color(AppColors.darkText),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      if (selected) {
+                                        categoriasSeleccionadas.add(
+                                          categoria.idCategoria,
+                                        );
+                                      } else {
+                                        categoriasSeleccionadas.remove(
+                                          categoria.idCategoria,
+                                        );
+                                      }
+                                    });
+                                    updateUnsavedChanges();
+                                  },
+                                ),
+                              )
+                              .toList(),
+                        ),
                     ],
                   ),
                 ),
@@ -1707,39 +2070,63 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                               final precio =
                                   double.parse(precioController.text.trim());
                               final nombrePlato = nombreController.text.trim();
-                              final nuevoPlato =
-                                  await MenuService.crearPlato(
-                                _currentRestaurant.idEstablecimiento,
-                                nombrePlato,
-                                precio,
-                                seccionSeleccionada,
-                                descripcion: descripcionController.text
-                                        .trim()
-                                        .isEmpty
-                                    ? null
-                                    : descripcionController.text.trim(),
-                              );
+                              final descripcion = descripcionController.text
+                                      .trim()
+                                      .isEmpty
+                                  ? null
+                                  : descripcionController.text.trim();
+                                final currentPlato = plato;
+
+                                final nuevoPlato = isEditing && currentPlato != null
+                                  ? await MenuService.actualizarPlato(
+                                    currentPlato.idItemMenu,
+                                    {
+                                    'nombre_item_menu': nombrePlato,
+                                    'descripcion': descripcion,
+                                    'precio': precio,
+                                    'id_establecimiento': _currentRestaurant
+                                      .idEstablecimiento,
+                                    'id_tipo_item_menu':
+                                      seccionSeleccionada,
+                                    'id_categorias':
+                                      categoriasSeleccionadas.toList(),
+                                    },
+                                  )
+                                  : await MenuService.crearPlato(
+                                    _currentRestaurant.idEstablecimiento,
+                                    nombrePlato,
+                                    precio,
+                                    seccionSeleccionada,
+                                    descripcion: descripcion,
+                                    idCategorias: categoriasSeleccionadas
+                                      .toList(),
+                                  );
 
                               if (this.mounted) {
                                 // Mostrar SnackBar ANTES de cerrar el dialog
                                 ScaffoldMessenger.of(ctx).showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      '"$nombrePlato" ha sido creado',
+                                      isEditing
+                                          ? '"$nombrePlato" ha sido actualizado'
+                                          : '"$nombrePlato" ha sido creado',
                                     ),
                                     backgroundColor:
                                         const Color(AppColors.successGreen),
                                   ),
                                 );
-                                // Cerrar el dialog después
+                                // Cerrar el dialog despu+®s
                                 Navigator.of(ctx).pop(nuevoPlato);
                               }
+                              await _refreshAfterMenuMutation();
                             } catch (e) {
                               if (this.mounted) {
                                 ScaffoldMessenger.of(ctx).showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      'Error al crear plato: ${e.toString().replaceFirst('Exception: ', '')}',
+                                      isEditing
+                                          ? 'Error al actualizar plato: ${e.toString().replaceFirst('Exception: ', '')}'
+                                          : 'Error al crear plato: ${e.toString().replaceFirst('Exception: ', '')}',
                                     ),
                                     backgroundColor:
                                         const Color(AppColors.errorRed),
@@ -1880,3 +2267,4 @@ class Math {
   static double sqrt(double x) => math.sqrt(x);
   static double asin(double x) => math.asin(x);
 }
+

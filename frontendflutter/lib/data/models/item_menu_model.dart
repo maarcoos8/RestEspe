@@ -1,4 +1,5 @@
 /// Modelo para un plato del menú.
+import 'categoria_dieta_model.dart';
 class ItemMenu {
   final int idItemMenu;
   final String nombreItemMenu;
@@ -6,6 +7,7 @@ class ItemMenu {
   final double precio;
   final int idEstablecimiento;
   final int? idTipoItemMenu;
+  final List<CategoriaDieta> categorias;
 
   ItemMenu({
     required this.idItemMenu,
@@ -14,6 +16,7 @@ class ItemMenu {
     required this.precio,
     required this.idEstablecimiento,
     this.idTipoItemMenu,
+    this.categorias = const [],
   });
 
   /// Convierte un JSON en un objeto ItemMenu.
@@ -43,6 +46,9 @@ class ItemMenu {
         precio: precio,
         idEstablecimiento: json['id_establecimiento'] as int,
         idTipoItemMenu: idTipoItemMenu,
+        categorias: (json['categorias'] as List<dynamic>?)
+            ?.map((c) => CategoriaDieta.fromJson(c as Map<String, dynamic>))
+            .toList() ?? [],
       );
     } catch (e) {
       throw Exception(

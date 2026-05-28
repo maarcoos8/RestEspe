@@ -24,6 +24,9 @@ from app.db.base import Base
 # Crea las tablas en Postgres al arrancar (solo si no existen)
 Base.metadata.create_all(bind=engine)
 
+# Registrar listeners de sincronización de categorías de menú
+import app.events.menu_category_sync  # noqa: F401  # registers SQLAlchemy event listeners
+
 app = FastAPI()
 
 # Incluimos las rutas

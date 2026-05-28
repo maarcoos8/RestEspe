@@ -6,6 +6,7 @@ from app.models.establecimiento import Establecimiento
 from app.models.item_menu import ItemMenu
 from app.models.tipo_item_menu import TipoItemMenu
 from app.schemas.item_menu import ItemMenuCreate, ItemMenuUpdate
+from typing import Set
 
 
 def get_item_menu(db: Session, id_item_menu: int) -> Optional[ItemMenu]:
@@ -32,10 +33,23 @@ def create_item_menu(db: Session, item_in: ItemMenuCreate) -> ItemMenu:
             raise ValueError("El id_establecimiento del item_menu debe coincidir con el del tipo_item_menu")
 
     data = item_in.model_dump(exclude_unset=True)
+    # `id_categorias` no es columna de ItemMenu; quitar antes de construir el ORM object
+    id_categorias = data.pop("id_categorias", None)
     db_obj = ItemMenu(**data)
     db.add(db_obj)
     db.commit()
     db.refresh(db_obj)
+
+    # Si se pasaron categorias, creamos las relaciones
+    if id_categorias:
+        from app.crud import crud_item_categoria
+
+        for cat_id in set(id_categorias or []):
+            try:
+                crud_item_categoria.create_item_categoria(db, db_obj.id_item_menu, cat_id)
+            except ValueError:
+                # ignorar relaciones inválidas, ya que la validación puede ocurrir por separado
+                continue
     return db_obj
 
 
@@ -62,6 +76,28 @@ def update_item_menu(db: Session, db_obj: ItemMenu, item_in: ItemMenuUpdate) -> 
     db.add(db_obj)
     db.commit()
     db.refresh(db_obj)
+
+    # Si se proporcionan id_categorias, sincronizamos las relaciones (add/remove)
+    if 'id_categorias' in data:
+        from app.crud import crud_item_categoria
+
+        desired: Set[int] = set(item_in.id_categorias or [])
+        existing_objs = crud_item_categoria.get_categorias_por_item(db, db_obj.id_item_menu)
+        existing: Set[int] = set([o.id_categoria for o in existing_objs])
+
+        # Añadir los nuevos
+        for cat_id in desired - existing:
+            try:
+                crud_item_categoria.create_item_categoria(db, db_obj.id_item_menu, cat_id)
+            except ValueError:
+                continue
+
+        # Eliminar los que sobran
+        for cat_id in existing - desired:
+            try:
+                crud_item_categoria.remove_item_categoria(db, db_obj.id_item_menu, cat_id)
+            except Exception:
+                continue
     return db_obj
 
 

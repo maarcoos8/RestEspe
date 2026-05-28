@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, Float, ForeignKey
+from sqlalchemy.orm import relationship
 
 from app.db.base import Base
 
@@ -12,3 +13,11 @@ class ItemMenu(Base):
     precio = Column(Float, nullable=False)
     id_establecimiento = Column(Integer, ForeignKey("establecimiento.id_establecimiento"), nullable=False)
     id_tipo_item_menu = Column(Integer, ForeignKey("tipo_item_menu.id_tipo_item"), nullable=True)
+
+    # Relación N:M hacia CategoriaDieta a través de item_categoria
+    categorias = relationship(
+        "CategoriaDieta",
+        secondary="item_categoria",
+        lazy="joined",
+        backref="items",
+    )

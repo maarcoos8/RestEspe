@@ -1,6 +1,8 @@
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel, ConfigDict
+
+from app.schemas.categoria_dieta import CategoriaDietaOut
 
 
 class ItemMenuBase(BaseModel):
@@ -12,7 +14,7 @@ class ItemMenuBase(BaseModel):
 
 
 class ItemMenuCreate(ItemMenuBase):
-    pass
+    id_categorias: Optional[List[int]] = None
 
 
 class ItemMenuUpdate(BaseModel):
@@ -21,9 +23,11 @@ class ItemMenuUpdate(BaseModel):
     precio: Optional[float] = None
     id_establecimiento: Optional[int] = None
     id_tipo_item_menu: Optional[int] = None
+    id_categorias: Optional[List[int]] = None
 
 
 class ItemMenuOut(ItemMenuBase):
     id_item_menu: int
+    categorias: List[CategoriaDietaOut] = []
 
     model_config = ConfigDict(from_attributes=True)
