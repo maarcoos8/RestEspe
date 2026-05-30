@@ -72,6 +72,7 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                       _AdminAddTile(
                         title: 'Añadir Dieta',
                         onTap: () async {
+                          final messenger = ScaffoldMessenger.of(context);
                           final newValue = await _showEditNameDialog(
                             context,
                             title: 'Añadir dieta',
@@ -86,7 +87,7 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                             await AdminService.createCategoriaDieta(newValue);
                             await _loadCategoriasDieta();
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 SnackBar(
                                   content: Text('"$newValue" ha sido creado'),
                                   backgroundColor: const Color(AppColors.successGreen),
@@ -106,6 +107,7 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                           isLast: isLast,
                           colorHex: dieta.colorHex,
                           onColorChanged: (String newColor) async {
+                            final messenger = ScaffoldMessenger.of(context);
                             try {
                               await AdminService.updateCategoriaDieta(
                                 dieta.idCategoria,
@@ -123,7 +125,7 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                                 }
                               });
                               if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                messenger.showSnackBar(
                                   SnackBar(
                                     content: Text('Color actualizado'),
                                     backgroundColor: const Color(AppColors.successGreen),
@@ -135,6 +137,7 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                             }
                           },
                           onEdit: () async {
+                            final messenger = ScaffoldMessenger.of(context);
                             final newValue = await _showEditNameDialog(
                               context,
                               title: 'Editar categoría de dieta',
@@ -162,7 +165,7 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                                 }
                               });
                               if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                messenger.showSnackBar(
                                   SnackBar(
                                     content: Text('"$newValue" ha sido actualizado'),
                                     backgroundColor: const Color(AppColors.successGreen),
@@ -174,10 +177,24 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                             }
                           },
                           onDelete: () async {
-                            await AdminService.deleteCategoriaDieta(dieta.idCategoria);
-                            setState(() {
-                              _categoriasDieta!.removeWhere((d) => d.idCategoria == dieta.idCategoria);
-                            });
+                            final messenger = ScaffoldMessenger.of(context);
+                            try {
+                              await AdminService.deleteCategoriaDieta(dieta.idCategoria);
+                              setState(() {
+                                _categoriasDieta!.removeWhere((d) => d.idCategoria == dieta.idCategoria);
+                              });
+
+                              if (mounted) {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text('"${dieta.nombreDieta}" ha sido eliminado'),
+                                    backgroundColor: const Color(AppColors.successGreen),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              _showErrorSnackBar(_formatApiError(e, 'Error al eliminar dieta'));
+                            }
                           },
                         );
                       }),
@@ -231,6 +248,7 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                       _AdminAddTile(
                         title: 'Añadir Tipo de establecimiento',
                         onTap: () async {
+                          final messenger = ScaffoldMessenger.of(context);
                           final newValue = await _showEditNameDialog(
                             context,
                             title: 'Añadir tipo de establecimiento',
@@ -245,7 +263,7 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                             await AdminService.createTipoEstablecimiento(newValue);
                             await _loadTiposEstablecimiento();
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 SnackBar(
                                   content: Text('"$newValue" ha sido creado'),
                                   backgroundColor: const Color(AppColors.successGreen),
@@ -264,6 +282,7 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                           title: tipo.nombreCategoria,
                           isLast: isLast,
                           onEdit: () async {
+                            final messenger = ScaffoldMessenger.of(context);
                             final newValue = await _showEditNameDialog(
                               context,
                               title: 'Editar tipo de establecimiento',
@@ -286,7 +305,7 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                                 }
                               });
                               if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                messenger.showSnackBar(
                                   SnackBar(
                                     content: Text('"$newValue" ha sido actualizado'),
                                     backgroundColor: const Color(AppColors.successGreen),
@@ -298,10 +317,24 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
                             }
                           },
                           onDelete: () async {
-                            await AdminService.deleteTipoEstablecimiento(tipo.idTipoEstablecimiento);
-                            setState(() {
-                              _tiposEstablecimiento!.removeWhere((t) => t.idTipoEstablecimiento == tipo.idTipoEstablecimiento);
-                            });
+                            final messenger = ScaffoldMessenger.of(context);
+                            try {
+                              await AdminService.deleteTipoEstablecimiento(tipo.idTipoEstablecimiento);
+                              setState(() {
+                                _tiposEstablecimiento!.removeWhere((t) => t.idTipoEstablecimiento == tipo.idTipoEstablecimiento);
+                              });
+
+                              if (mounted) {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text('"${tipo.nombreCategoria}" ha sido eliminado'),
+                                    backgroundColor: const Color(AppColors.successGreen),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              _showErrorSnackBar(_formatApiError(e, 'Error al eliminar tipo de establecimiento'));
+                            }
                           },
                         );
                       }),
@@ -389,6 +422,7 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
     required String title,
     required String currentValue,
   }) async {
+    final messenger = ScaffoldMessenger.of(context);
     final result = await showDialog<String?>(
       context: context,
       builder: (dialogContext) {
@@ -424,7 +458,7 @@ class _AdminApplicationScreenState extends State<AdminApplicationScreen> {
 
     if (result == null || result.isEmpty) {
       if (mounted && result != null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('El nombre no puede estar vacío')));
+        messenger.showSnackBar(const SnackBar(content: Text('El nombre no puede estar vacío')));
       }
       return null;
     }
@@ -626,7 +660,7 @@ class _AdminItemTileState extends State<_AdminItemTile> {
             ),
             ElevatedButton(
               onPressed: () async {
-                final hexColor = '#${screenPickerColor.value.toRadixString(16).substring(2).toUpperCase()}';
+                final hexColor = '#${screenPickerColor.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
                 Navigator.of(context).pop();
                 if (widget.onColorChanged != null) {
                   try {
@@ -755,11 +789,13 @@ class _AdminItemTileState extends State<_AdminItemTile> {
                           backgroundColor: const Color(AppColors.errorRed),
                         ),
                         onPressed: () async {
+                          final navigator = Navigator.of(ctx);
+                          final messenger = ScaffoldMessenger.of(ctx);
                           try {
                             await widget.onDelete!();
-                            Navigator.of(ctx).pop();
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                            navigator.pop();
+                            if (mounted) {
+                              messenger.showSnackBar(
                                 SnackBar(
                                   content: Text('"${widget.title}" ha sido eliminado'),
                                   backgroundColor: const Color(AppColors.successGreen),
@@ -767,9 +803,9 @@ class _AdminItemTileState extends State<_AdminItemTile> {
                               );
                             }
                           } catch (e) {
-                            Navigator.of(ctx).pop();
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                            navigator.pop();
+                            if (mounted) {
+                              messenger.showSnackBar(
                                 SnackBar(
                                   content: Text('Error al eliminar: $e'),
                                   backgroundColor: const Color(AppColors.errorRed),

@@ -927,6 +927,19 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
 
                     await MenuService.eliminarSeccion(seccion.idTipoItem);
                     await _refreshAfterMenuMutation();
+
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            shouldDeletePlatos
+                                ? 'Sección y platos eliminados'
+                                : 'Sección eliminada',
+                          ),
+                          backgroundColor: const Color(AppColors.successGreen),
+                        ),
+                      );
+                    }
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
