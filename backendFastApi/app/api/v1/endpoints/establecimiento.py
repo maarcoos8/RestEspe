@@ -27,6 +27,8 @@ def filtrar_establecimientos(
     nombre: Optional[str] = Query(default=None),
     categoria_dieta_ids: Optional[List[int]] = Query(default=None),
     propietario_id: Optional[int] = Query(default=None),
+    solo_verificados: Optional[bool] = Query(default=None),
+    puntuacion_media_minima: Optional[float] = Query(default=None, ge=0, le=5),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=10, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -40,6 +42,8 @@ def filtrar_establecimientos(
         nombre=nombre,
         categorias_dieta_ids=categoria_dieta_ids,
         propietario_id=propietario_id,
+        solo_verificados=solo_verificados,
+        puntuacion_media_minima=puntuacion_media_minima,
         skip=skip,
         limit=limit,
     )

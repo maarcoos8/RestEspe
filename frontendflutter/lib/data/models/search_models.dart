@@ -39,11 +39,42 @@ class SearchRestaurantResult {
   }
 }
 
-class DietCategory {
-  const DietCategory({
-    required this.idCategoria,
-    required this.nombreDieta,
+class RestaurantMapFilters {
+  const RestaurantMapFilters({
+    this.selectedDietIds = const [],
+    this.selectedTypeIds = const [],
+    this.onlyVerified = false,
+    this.minimumRating,
   });
+
+  final List<int> selectedDietIds;
+  final List<int> selectedTypeIds;
+  final bool onlyVerified;
+  final double? minimumRating;
+
+  bool get hasActiveFilters =>
+      selectedDietIds.isNotEmpty ||
+      selectedTypeIds.isNotEmpty ||
+      onlyVerified ||
+      minimumRating != null;
+
+  RestaurantMapFilters copyWith({
+    List<int>? selectedDietIds,
+    List<int>? selectedTypeIds,
+    bool? onlyVerified,
+    double? minimumRating,
+  }) {
+    return RestaurantMapFilters(
+      selectedDietIds: selectedDietIds ?? this.selectedDietIds,
+      selectedTypeIds: selectedTypeIds ?? this.selectedTypeIds,
+      onlyVerified: onlyVerified ?? this.onlyVerified,
+      minimumRating: minimumRating ?? this.minimumRating,
+    );
+  }
+}
+
+class DietCategory {
+  const DietCategory({required this.idCategoria, required this.nombreDieta});
 
   final int idCategoria;
   final String nombreDieta;

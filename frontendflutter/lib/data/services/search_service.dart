@@ -66,15 +66,14 @@ class SearchService {
 
   Future<List<SearchRestaurantResult>> searchRestaurants({
     required String query,
+    RestaurantMapFilters filters = const RestaurantMapFilters(),
   }) async {
     final normalizedQuery = query.trim();
     if (normalizedQuery.length < 2) {
       return const [];
     }
 
-    final uri = Uri.parse(
-      '${AppConstants.apiBaseUrl}/establecimiento/filtrar',
-    ).replace(queryParameters: <String, String>{'nombre': normalizedQuery});
+    final uri = _buildFilteredUri(nombre: normalizedQuery, filters: filters);
 
     final response = await _client.get(
       uri,
@@ -123,15 +122,14 @@ class SearchService {
   Future<List<SearchRestaurantResult>> searchRestaurantsInViewport({
     required LatLng center,
     required double radiusMeters,
+    RestaurantMapFilters filters = const RestaurantMapFilters(),
   }) async {
-    final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento/filtrar')
-        .replace(
-          queryParameters: <String, String>{
-            'latitud': center.latitude.toString(),
-            'longitud': center.longitude.toString(),
-            'distancia_metros': radiusMeters.toStringAsFixed(0),
-          },
-        );
+    final uri = _buildFilteredUri(
+      latitud: center.latitude,
+      longitud: center.longitude,
+      distanciaMetros: radiusMeters,
+      filters: filters,
+    );
 
     final response = await _client.get(
       uri,
@@ -179,5 +177,71 @@ class SearchService {
 
   void dispose() {
     _client.close();
+  }
+
+  Uri _buildFilteredUri({
+    String? nombre,
+    double? latitud,
+    double? longitud,
+    double? distanciaMetros,
+    RestaurantMapFilters filters = const RestaurantMapFilters(),
+  }) {
+    final queryParametersAll = <String, List<String>>{};
+
+    if (nombre != null && nombre.trim().isNotEmpty) {
+      queryParametersAll['nombre'] = <String>[nombre.trim()];
+    }
+
+    if (latitud != null) {
+      queryParametersAll['latitud'] = <String>[latitud.toString()];
+    }
+
+    if (longitud != null) {
+      queryParametersAll['longitud'] = <String>[longitud.toString()];
+    }
+
+    if (distanciaMetros != null) {
+      queryParametersAll['distancia_metros'] = <String>[
+        distanciaMetros.toStringAsFixed(0),
+      ];
+    }
+
+    if (filters.selectedDietIds.isNotEmpty) {
+      queryParametersAll['categoria_dieta_ids'] = filters.selectedDietIds
+          .map((id) => id.toString())
+          .toList();
+    }
+
+    if (filters.selectedTypeIds.isNotEmpty) {
+      queryParametersAll['tipo_establecimiento_ids'] = filters.selectedTypeIds
+          .map((id) => id.toString())
+          .toList();
+    }
+
+    if (filters.onlyVerified) {
+      queryParametersAll['solo_verificados'] = <String>['true'];
+    }
+
+    if (filters.minimumRating != null) {
+      queryParametersAll['puntuacion_media_minima'] = <String>[
+        filters.minimumRating!.toString(),
+      ];
+    }
+
+    return Uri.parse(
+      '${AppConstants.apiBaseUrl}/establecimiento/filtrar',
+    ).replace(query: _encodeRepeatedQueryParameters(queryParametersAll));
+  }
+
+  String _encodeRepeatedQueryParameters(Map<String, List<String>> parameters) {
+    final parts = <String>[];
+
+    for (final entry in parameters.entries) {
+      for (final value in entry.value) {
+        parts.add('${Uri.encodeQueryComponent(entry.key)}=${Uri.encodeQueryComponent(value)}');
+      }
+    }
+
+    return parts.join('&');
   }
 }

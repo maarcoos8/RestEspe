@@ -8,7 +8,8 @@ import '../data/models/search_models.dart';
 import '../data/services/search_service.dart';
 
 class SearchProvider extends ChangeNotifier {
-  SearchProvider({SearchService? service}) : _service = service ?? SearchService();
+  SearchProvider({SearchService? service})
+    : _service = service ?? SearchService();
 
   final SearchService _service;
   Timer? _debounceTimer;
@@ -18,6 +19,7 @@ class SearchProvider extends ChangeNotifier {
   List<SearchLocationResult> _locations = const [];
   List<SearchRestaurantResult> _restaurants = const [];
   List<SearchRestaurantResult> _visibleRestaurants = const [];
+  RestaurantMapFilters _filters = RestaurantMapFilters();
   MapFocusRequest? _focusRequest;
   LatLng? _referencePoint;
   LatLngBounds? _viewportBounds;
@@ -32,9 +34,11 @@ class SearchProvider extends ChangeNotifier {
   List<SearchLocationResult> get locations => _locations;
   List<SearchRestaurantResult> get restaurants => _restaurants;
   List<SearchRestaurantResult> get visibleRestaurants => _visibleRestaurants;
+  RestaurantMapFilters get filters => _filters;
   MapFocusRequest? get focusRequest => _focusRequest;
 
   bool get hasResults => _locations.isNotEmpty || _restaurants.isNotEmpty;
+  bool get hasActiveFilters => _filters.hasActiveFilters;
 
   void updateReferencePoint(LatLng point) {
     final previous = _referencePoint;
@@ -60,6 +64,18 @@ class SearchProvider extends ChangeNotifier {
     _viewportDebounceTimer = Timer(const Duration(milliseconds: 250), () {
       unawaited(_runViewportFetch(bounds));
     });
+  }
+
+  void applyFilters(RestaurantMapFilters filters) {
+    _filters = filters;
+    _searchGeneration++;
+    _viewportGeneration++;
+    notifyListeners();
+    _refreshFilteredResults();
+  }
+
+  void clearFilters() {
+    applyFilters(RestaurantMapFilters());
   }
 
   void onQueryChanged(String value) {
@@ -88,7 +104,10 @@ class SearchProvider extends ChangeNotifier {
 
     try {
       final locations = await _service.searchLocations(query);
-      final restaurants = await _service.searchRestaurants(query: query);
+      final restaurants = await _service.searchRestaurants(
+        query: query,
+        filters: _filters,
+      );
 
       if (searchGeneration != _searchGeneration) {
         return;
@@ -120,16 +139,19 @@ class SearchProvider extends ChangeNotifier {
       final restaurants = await _service.searchRestaurantsInViewport(
         center: center,
         radiusMeters: radiusMeters,
+        filters: _filters,
       );
 
       if (viewportGeneration != _viewportGeneration) {
         return;
       }
 
-      final filtered = restaurants.where((restaurant) {
-        final coordinates = restaurant.coordinates;
-        return coordinates != null && bounds.contains(coordinates);
-      }).toList(growable: false);
+      final filtered = restaurants
+          .where((restaurant) {
+            final coordinates = restaurant.coordinates;
+            return coordinates != null && bounds.contains(coordinates);
+          })
+          .toList(growable: false);
 
       _visibleRestaurants = filtered;
       _sortVisibleRestaurantsByProximity();
@@ -151,8 +173,16 @@ class SearchProvider extends ChangeNotifier {
 
     _locations = [..._locations]
       ..sort((a, b) {
-        final aDistance = _distance.as(LengthUnit.Meter, referencePoint, a.coordinates);
-        final bDistance = _distance.as(LengthUnit.Meter, referencePoint, b.coordinates);
+        final aDistance = _distance.as(
+          LengthUnit.Meter,
+          referencePoint,
+          a.coordinates,
+        );
+        final bDistance = _distance.as(
+          LengthUnit.Meter,
+          referencePoint,
+          b.coordinates,
+        );
         return aDistance.compareTo(bDistance);
       });
 
@@ -171,8 +201,16 @@ class SearchProvider extends ChangeNotifier {
           return -1;
         }
 
-        final aDistance = _distance.as(LengthUnit.Meter, referencePoint, aCoords);
-        final bDistance = _distance.as(LengthUnit.Meter, referencePoint, bCoords);
+        final aDistance = _distance.as(
+          LengthUnit.Meter,
+          referencePoint,
+          aCoords,
+        );
+        final bDistance = _distance.as(
+          LengthUnit.Meter,
+          referencePoint,
+          bCoords,
+        );
         return aDistance.compareTo(bDistance);
       });
   }
@@ -198,8 +236,16 @@ class SearchProvider extends ChangeNotifier {
           return -1;
         }
 
-        final aDistance = _distance.as(LengthUnit.Meter, referencePoint, aCoords);
-        final bDistance = _distance.as(LengthUnit.Meter, referencePoint, bCoords);
+        final aDistance = _distance.as(
+          LengthUnit.Meter,
+          referencePoint,
+          aCoords,
+        );
+        final bDistance = _distance.as(
+          LengthUnit.Meter,
+          referencePoint,
+          bCoords,
+        );
         return aDistance.compareTo(bDistance);
       });
   }
@@ -242,6 +288,19 @@ class SearchProvider extends ChangeNotifier {
   void clearSuggestions() {
     _query = '';
     _clearResults();
+  }
+
+  void _refreshFilteredResults() {
+    final query = _query.trim();
+    final viewportBounds = _viewportBounds;
+
+    if (query.isNotEmpty) {
+      unawaited(_runSearch(query));
+    }
+
+    if (viewportBounds != null) {
+      unawaited(_runViewportFetch(viewportBounds));
+    }
   }
 
   void _clearResults() {

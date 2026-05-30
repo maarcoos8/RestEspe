@@ -84,9 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
               ),
               // Contenido central según el índice
-              Expanded(
-                child: _buildContent(),
-              ),
+              Expanded(child: _buildContent()),
             ],
           ),
           // Barra de navegación inferior
@@ -115,29 +113,61 @@ class _HomeScreenState extends State<HomeScreen> {
       case 1:
         // Índice 1: Mapa
         return Selector<
-            SearchProvider,
-            ({MapFocusRequest? focusRequest, List<SearchRestaurantResult> visibleRestaurants})
-          >(
-            selector: (_, provider) => (
-              focusRequest: provider.focusRequest,
-              visibleRestaurants: provider.visibleRestaurants,
-            ),
-            builder: (context, mapState, _) {
-              return Stack(
-                children: [
-                  AppMap(
-                    focusRequest: mapState.focusRequest,
-                  ),
-                  const Positioned(
+          SearchProvider,
+          ({
+            MapFocusRequest? focusRequest,
+            List<SearchRestaurantResult> visibleRestaurants,
+            bool hasActiveFilters,
+          })
+        >(
+          selector: (_, provider) => (
+            focusRequest: provider.focusRequest,
+            visibleRestaurants: provider.visibleRestaurants,
+            hasActiveFilters: provider.hasActiveFilters,
+          ),
+          builder: (context, mapState, _) {
+            return Stack(
+              children: [
+                AppMap(focusRequest: mapState.focusRequest),
+                const Positioned(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  child: AppSearchBar(),
+                ),
+                if (mapState.hasActiveFilters)
+                  Positioned(
                     left: 16,
                     right: 16,
-                    top: 16,
-                    child: AppSearchBar(),
+                    top: 78,
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          context.read<SearchProvider>().clearFilters();
+                        },
+                        icon: const Icon(
+                          Icons.filter_alt_off_rounded,
+                          size: 18,
+                        ),
+                        label: const Text('Quitar filtros'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(AppColors.primaryOrange),
+                          foregroundColor: const Color(AppColors.white),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          textStyle: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
                   ),
-                ],
-              );
-            },
-          );
+              ],
+            );
+          },
+        );
       case 2:
         // Índice 2: Perfil
         return const ProfileScreen();
@@ -148,11 +178,14 @@ class _HomeScreenState extends State<HomeScreen> {
         // Si el usuario es `Propietario`, mostrar sus establecimientos filtrando por su ID
         final roleId = authProvider.currentUser?.idRol;
         final userId = authProvider.currentUser?.idUsuario;
-        
+
         if (roleId == RoleConstants.rolAdministradorGlobal) {
           return const AdminEstablishmentsScreen(embedInHome: true);
         } else if (roleId == RoleConstants.rolPropietario && userId != null) {
-          return AdminEstablishmentsScreen(embedInHome: true, propietarioId: userId);
+          return AdminEstablishmentsScreen(
+            embedInHome: true,
+            propietarioId: userId,
+          );
         }
 
         return const AdminScreen();

@@ -41,7 +41,7 @@ def _base_establecimiento_filtrado_query(db: Session):
             puntuacion_media_subq.c.id_establecimiento == Establecimiento.id_establecimiento,
         )
     )
-    return query
+    return query, puntuacion_media_subq
 
 
 def get_establecimiento(db: Session, id_establecimiento: int) -> Optional[Establecimiento]:
@@ -76,10 +76,12 @@ def get_establecimientos_filtrados(
     nombre: Optional[str] = None,
     categorias_dieta_ids: Optional[List[int]] = None,
     propietario_id: Optional[int] = None,
+    solo_verificados: Optional[bool] = None,
+    puntuacion_media_minima: Optional[float] = None,
     skip: int = 0,
     limit: int = 100,
 ):
-    query = _base_establecimiento_filtrado_query(db)
+    query, puntuacion_media_subq = _base_establecimiento_filtrado_query(db)
 
     if nombre:
         query = query.filter(Establecimiento.nombre.ilike(f"%{nombre}%"))
@@ -87,17 +89,24 @@ def get_establecimientos_filtrados(
     if propietario_id is not None:
         query = query.filter(Establecimiento.propietario_id == propietario_id)
 
+    if solo_verificados:
+        query = query.filter(Establecimiento.estado_verificado.is_(True))
+
     if latitud is not None and longitud is not None and distancia_metros is not None:
         punto = func.ST_SetSRID(func.ST_MakePoint(longitud, latitud), 4326)
         query = query.filter(func.ST_DistanceSphere(Establecimiento.coordenadas, punto) <= distancia_metros)
+
+    if puntuacion_media_minima is not None:
+        query = query.filter(
+            func.coalesce(puntuacion_media_subq.c.puntuacion_media, 0) >= puntuacion_media_minima
+        )
 
     if tipos_establecimiento_ids:
         tipos_unicos = list(dict.fromkeys(tipos_establecimiento_ids))
         subquery_tipos = (
             db.query(EstablecimientoTipo.id_establecimiento)
             .filter(EstablecimientoTipo.id_tipo_establecimiento.in_(tipos_unicos))
-            .group_by(EstablecimientoTipo.id_establecimiento)
-            .having(func.count(distinct(EstablecimientoTipo.id_tipo_establecimiento)) == len(tipos_unicos))
+            .distinct()
         )
         query = query.filter(Establecimiento.id_establecimiento.in_(subquery_tipos))
 

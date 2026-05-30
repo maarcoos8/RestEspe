@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../data/models/search_models.dart';
 import '../providers/search_provider.dart';
+import 'map_filters_sheet.dart';
 
 /// Barra de búsqueda para la pantalla de mapa.
 /// Permite escribir texto pero sin ejecutar búsqueda aún.
@@ -65,6 +66,7 @@ class _AppSearchBarState extends State<AppSearchBar> {
     if (!mounted) {
       return;
     }
+    setState(() {});
     _syncOverlay();
     _overlayEntry?.markNeedsBuild();
   }
@@ -75,7 +77,8 @@ class _AppSearchBarState extends State<AppSearchBar> {
       return;
     }
 
-    final shouldShow = _focusNode.hasFocus && _searchController.text.trim().isNotEmpty;
+    final shouldShow =
+        _focusNode.hasFocus && _searchController.text.trim().isNotEmpty;
 
     if (!shouldShow || (!provider.isLoading && !provider.hasResults)) {
       _removeOverlay();
@@ -147,6 +150,28 @@ class _AppSearchBarState extends State<AppSearchBar> {
     _removeOverlay();
   }
 
+  Future<void> _openFilters() async {
+    final provider = _searchProvider;
+    if (provider == null) {
+      return;
+    }
+
+    _dismissOverlay();
+
+    final filters = await showModalBottomSheet<RestaurantMapFilters>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => MapFiltersSheet(initialFilters: provider.filters),
+    );
+
+    if (!mounted || filters == null) {
+      return;
+    }
+
+    provider.applyFilters(filters);
+  }
+
   @override
   Widget build(BuildContext context) {
     return CompositedTransformTarget(
@@ -180,24 +205,56 @@ class _AppSearchBarState extends State<AppSearchBar> {
                 decoration: InputDecoration(
                   hintText: 'Busca establecimientos o ubicaciones',
                   hintStyle: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: const Color(AppColors.lightText),
-                        fontWeight: FontWeight.w400,
-                      ),
+                    color: const Color(AppColors.lightText),
+                    fontWeight: FontWeight.w400,
+                  ),
                   border: InputBorder.none,
                   isDense: true,
                   contentPadding: EdgeInsets.zero,
                 ),
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: const Color(AppColors.darkText),
-                      fontWeight: FontWeight.w500,
-                    ),
+                  color: const Color(AppColors.darkText),
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
             const SizedBox(width: 8),
-            Icon(
-              Icons.tune_rounded,
-              color: const Color(AppColors.primaryOrange),
-              size: 28,
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 40,
+                      height: 40,
+                    ),
+                    icon: const Icon(
+                      Icons.tune_rounded,
+                      color: Color(AppColors.primaryOrange),
+                      size: 28,
+                    ),
+                    tooltip: 'Filtros',
+                    onPressed: _openFilters,
+                  ),
+                  if (_searchProvider?.hasActiveFilters == true)
+                    Positioned(
+                      right: 4,
+                      top: 4,
+                      child: Container(
+                        width: 9,
+                        height: 9,
+                        decoration: BoxDecoration(
+                          color: const Color(AppColors.primaryOrange),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ],
         ),
@@ -219,7 +276,8 @@ class _SearchResultsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasResults = provider.locations.isNotEmpty || provider.restaurants.isNotEmpty;
+    final hasResults =
+        provider.locations.isNotEmpty || provider.restaurants.isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
@@ -246,38 +304,38 @@ class _SearchResultsPanel extends StatelessWidget {
               ),
             )
           : !hasResults
-              ? const Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Text('Sin resultados'),
-                )
-              : ListView(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  shrinkWrap: true,
-                  children: [
-                    if (provider.restaurants.isNotEmpty) ...[
-                      _SectionHeader(title: '🍴 Restaurantes'),
-                      ...provider.restaurants.map(
-                        (restaurant) => _SearchItem(
-                          title: restaurant.nombre,
-                          subtitle: restaurant.direccionTexto ?? 'Sin dirección',
-                          icon: Icons.restaurant_rounded,
-                          onTap: () => onRestaurantSelected(restaurant),
-                        ),
-                      ),
-                    ],
-                    if (provider.locations.isNotEmpty) ...[
-                      _SectionHeader(title: '📍 Ubicaciones'),
-                      ...provider.locations.map(
-                        (location) => _SearchItem(
-                          title: location.displayName,
-                          subtitle: 'Abrir ubicación en el mapa',
-                          icon: Icons.place_rounded,
-                          onTap: () => onLocationSelected(location),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+          ? const Padding(
+              padding: EdgeInsets.all(20),
+              child: Text('Sin resultados'),
+            )
+          : ListView(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              shrinkWrap: true,
+              children: [
+                if (provider.restaurants.isNotEmpty) ...[
+                  _SectionHeader(title: '🍴 Restaurantes'),
+                  ...provider.restaurants.map(
+                    (restaurant) => _SearchItem(
+                      title: restaurant.nombre,
+                      subtitle: restaurant.direccionTexto ?? 'Sin dirección',
+                      icon: Icons.restaurant_rounded,
+                      onTap: () => onRestaurantSelected(restaurant),
+                    ),
+                  ),
+                ],
+                if (provider.locations.isNotEmpty) ...[
+                  _SectionHeader(title: '📍 Ubicaciones'),
+                  ...provider.locations.map(
+                    (location) => _SearchItem(
+                      title: location.displayName,
+                      subtitle: 'Abrir ubicación en el mapa',
+                      icon: Icons.place_rounded,
+                      onTap: () => onLocationSelected(location),
+                    ),
+                  ),
+                ],
+              ],
+            ),
     );
   }
 }
@@ -294,9 +352,9 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: const Color(AppColors.primaryOrange),
-              fontWeight: FontWeight.w700,
-            ),
+          color: const Color(AppColors.primaryOrange),
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -346,9 +404,9 @@ class _SearchItem extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: const Color(AppColors.darkText),
-                          fontWeight: FontWeight.w600,
-                        ),
+                      color: const Color(AppColors.darkText),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -356,8 +414,8 @@ class _SearchItem extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(AppColors.lightText),
-                        ),
+                      color: const Color(AppColors.lightText),
+                    ),
                   ),
                 ],
               ),
