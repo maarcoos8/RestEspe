@@ -1,8 +1,10 @@
 ﻿import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../core/constants.dart';
 import '../core/role_constants.dart';
@@ -61,6 +63,28 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   bool _isLoadingMenu = false;
   String? _errorMenu;
   final Set<int> _expandedSections = {};
+
+  Future<void> _shareEstablishment() async {
+    final link = AppConstants.establishmentShareUrl(
+      _currentRestaurant.idEstablecimiento,
+    );
+
+    await Clipboard.setData(ClipboardData(text: link));
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enlace copiado'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+
+    await Share.share(
+      'Mira este establecimiento en PinFood: $link',
+      subject: 'Compartido desde PinFood',
+    );
+  }
 
   @override
   void initState() {
@@ -564,26 +588,55 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                   Positioned(
                     right: 24,
                     top: -20,
-                    child: Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        color: const Color(AppColors.white),
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.12),
-                            blurRadius: 14,
-                            offset: const Offset(0, 6),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: const Color(AppColors.white),
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.12),
+                                blurRadius: 14,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: Center(
-                        child: FavoriteButton(
-                          establishmentId: _currentRestaurant.idEstablecimiento,
-                          size: 28,
+                          child: IconButton(
+                            onPressed: _shareEstablishment,
+                            icon: const Icon(
+                              Icons.share,
+                              color: Color(AppColors.primaryGreen),
+                            ),
+                            tooltip: 'Compartir establecimiento',
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 10),
+                        Container(
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: const Color(AppColors.white),
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.12),
+                                blurRadius: 14,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: FavoriteButton(
+                              establishmentId:
+                                  _currentRestaurant.idEstablecimiento,
+                              size: 28,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

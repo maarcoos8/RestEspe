@@ -8,6 +8,10 @@ class AppConstants {
   // static const String apiBaseUrl = 'http://localhost:8000/api/v1'; // Navegador Web
   static const String googleWebClientId =
       '620484736041-ka99882ekb8d1qecvrng9qicp4gl6d1h.apps.googleusercontent.com';
+  static const String shareBaseUrl = String.fromEnvironment(
+    'SHARE_BASE_URL',
+    defaultValue: 'http://10.0.2.2:8000',
+  );
 
   // Strings
   static const String appName = 'PinFood';
@@ -17,6 +21,10 @@ class AppConstants {
   static const String loginRoute = '/login';
   static const String mapRoute = '/map';
   static const String restaurantDetailRoute = '/restaurant/:id';
+
+  static String establishmentShareUrl(int idEstablecimiento) {
+    return '$shareBaseUrl/deeplink/establecimiento/$idEstablecimiento';
+  }
 
   // Storage Keys
   static const String tokenKey = 'jwt_token';
