@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../../core/auth_token_store.dart';
 import '../../core/constants.dart';
 import '../models/search_models.dart';
 
@@ -12,7 +13,9 @@ class FavoriteService {
   final http.Client _client;
 
   Future<List<SearchRestaurantResult>> getFavoritesByUser(int userId) async {
-    final uri = Uri.parse('${AppConstants.apiBaseUrl}/usuario_establecimiento_favorito/usuario/$userId');
+    final uri = Uri.parse(
+      '${AppConstants.apiBaseUrl}/usuario_establecimiento_favorito/usuario/$userId',
+    );
 
     final response = await _client.get(
       uri,
@@ -46,22 +49,31 @@ class FavoriteService {
             latitud: double.tryParse(entry['latitud']?.toString() ?? ''),
             longitud: double.tryParse(entry['longitud']?.toString() ?? ''),
             estadoVerificado: entry['estado_verificado'] as bool?,
-            ultimaVerificacion: DateTime.tryParse(entry['ultima_verificacion']?.toString() ?? ''),
-            verificadorId: int.tryParse(entry['verificador_id']?.toString() ?? ''),
+            ultimaVerificacion: DateTime.tryParse(
+              entry['ultima_verificacion']?.toString() ?? '',
+            ),
+            verificadorId: int.tryParse(
+              entry['verificador_id']?.toString() ?? '',
+            ),
           );
         })
         .whereType<SearchRestaurantResult>()
         .toList(growable: false);
   }
 
-  Future<void> addFavorite({required int userId, required int establishmentId}) async {
-    final uri = Uri.parse('${AppConstants.apiBaseUrl}/usuario_establecimiento_favorito/');
+  Future<void> addFavorite({
+    required int userId,
+    required int establishmentId,
+  }) async {
+    final uri = Uri.parse(
+      '${AppConstants.apiBaseUrl}/usuario_establecimiento_favorito/',
+    );
     final response = await _client.post(
       uri,
-      headers: const <String, String>{
+      headers: AuthTokenStore.withAuth(const <String, String>{
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-      },
+      }),
       body: jsonEncode(<String, int>{
         'id_usuario': userId,
         'id_establecimiento': establishmentId,
@@ -73,14 +85,19 @@ class FavoriteService {
     }
   }
 
-  Future<void> removeFavorite({required int userId, required int establishmentId}) async {
+  Future<void> removeFavorite({
+    required int userId,
+    required int establishmentId,
+  }) async {
     final uri = Uri.parse(
       '${AppConstants.apiBaseUrl}/usuario_establecimiento_favorito/usuario/$userId/establecimiento/$establishmentId',
     );
 
     final response = await _client.delete(
       uri,
-      headers: const <String, String>{'Accept': 'application/json'},
+      headers: AuthTokenStore.withAuth(const <String, String>{
+        'Accept': 'application/json',
+      }),
     );
 
     if (response.statusCode != 200) {

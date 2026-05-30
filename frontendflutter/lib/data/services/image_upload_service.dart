@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../core/auth_token_store.dart';
 
 class ImageUploadService {
   final String baseUrl;
@@ -56,10 +57,14 @@ class ImageUploadService {
 
     try {
       final request = http.MultipartRequest('POST', uri);
+      request.headers.addAll(AuthTokenStore.withAuth(const {}));
       request.fields['id_establecimiento'] = idEstablecimiento.toString();
       request.fields['id_usuario'] = idUsuario.toString();
 
-      final multipartFile = await http.MultipartFile.fromPath('file', imageFile.path);
+      final multipartFile = await http.MultipartFile.fromPath(
+        'file',
+        imageFile.path,
+      );
       request.files.add(multipartFile);
 
       final streamed = await request.send();
@@ -69,7 +74,8 @@ class ImageUploadService {
         // Respuesta esperada: objeto FotografiaOut en JSON, contiene `url_imagen`
         final body = resp.body;
         try {
-          final Map<String, dynamic> parsed = jsonDecode(body) as Map<String, dynamic>;
+          final Map<String, dynamic> parsed =
+              jsonDecode(body) as Map<String, dynamic>;
           return parsed['url_imagen'] as String;
         } catch (e) {
           throw Exception('Error procesando respuesta del servidor: $e');
@@ -105,14 +111,18 @@ class ImageUploadService {
 
     try {
       final request = http.MultipartRequest('POST', uri);
-      request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+      request.headers.addAll(AuthTokenStore.withAuth(const {}));
+      request.files.add(
+        await http.MultipartFile.fromPath('file', imageFile.path),
+      );
 
       final streamed = await request.send();
       final resp = await http.Response.fromStream(streamed);
 
       if (resp.statusCode == 201) {
         try {
-          final Map<String, dynamic> parsed = jsonDecode(resp.body) as Map<String, dynamic>;
+          final Map<String, dynamic> parsed =
+              jsonDecode(resp.body) as Map<String, dynamic>;
           return parsed['image_url'] as String;
         } catch (e) {
           throw Exception('Error procesando respuesta del servidor: $e');
@@ -133,7 +143,8 @@ class ImageUploadService {
       return 'Respuesta vacía del servidor';
     }
     try {
-      final Map<String, dynamic> parsed = jsonDecode(responseBody) as Map<String, dynamic>;
+      final Map<String, dynamic> parsed =
+          jsonDecode(responseBody) as Map<String, dynamic>;
       if (parsed['detail'] != null) {
         return parsed['detail'].toString();
       }
@@ -143,4 +154,3 @@ class ImageUploadService {
     }
   }
 }
-

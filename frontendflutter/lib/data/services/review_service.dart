@@ -4,6 +4,7 @@ import 'dart:convert';
 import '../models/review_model.dart';
 import 'image_upload_service.dart';
 import '../../core/constants.dart';
+import '../../core/auth_token_store.dart';
 
 /// Servicio para obtener reseñas de un establecimiento.
 class ReviewService {
@@ -72,7 +73,9 @@ class ReviewService {
       final resp = await http
           .post(
             uri,
-            headers: {'Content-Type': 'application/json'},
+            headers: AuthTokenStore.withAuth({
+              'Content-Type': 'application/json',
+            }),
             body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 15));
@@ -95,7 +98,10 @@ class ReviewService {
   Future<bool> deleteReview(int idResena) async {
     try {
       final response = await http
-          .delete(Uri.parse('$baseUrl/resena/$idResena'))
+          .delete(
+            Uri.parse('$baseUrl/resena/$idResena'),
+            headers: AuthTokenStore.withAuth(const {}),
+          )
           .timeout(const Duration(seconds: 10));
 
       return response.statusCode == 200;

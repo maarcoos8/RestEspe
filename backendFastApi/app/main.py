@@ -1,5 +1,7 @@
 # Punto de entrada de la aplicación FastAPI
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi import Request
+from fastapi.responses import JSONResponse
 from app.api.v1.endpoints import (
 	establecimiento,
 	establecimiento_categoria as establecimiento_categoria_endpoint,
@@ -20,6 +22,7 @@ from app.api.v1.endpoints import (
 )
 from app.db.session import engine
 from app.db.base import Base
+from app.core.security import verify_google_bearer_token
 
 # Crea las tablas en Postgres al arrancar (solo si no existen)
 Base.metadata.create_all(bind=engine)
@@ -28,6 +31,35 @@ Base.metadata.create_all(bind=engine)
 import app.events.menu_category_sync  # noqa: F401  # registers SQLAlchemy event listeners
 
 app = FastAPI()
+
+
+@app.middleware("http")
+async def enforce_jwt_on_write_requests(request: Request, call_next):
+	"""Exige JWT válido en operaciones de escritura de la API.
+
+	Se aplica a métodos POST/PUT/DELETE bajo /api/v1,
+	excepto el login de Google.
+	"""
+	path = request.url.path
+	method = request.method.upper()
+
+	requires_jwt = (
+		path.startswith("/api/v1/")
+		and method in {"POST", "PUT", "DELETE"}
+		and path != "/api/v1/auth/google"
+	)
+
+	if requires_jwt:
+		try:
+			claims = verify_google_bearer_token(request.headers.get("Authorization"))
+			request.state.jwt_claims = claims
+		except HTTPException as exc:
+			return JSONResponse(
+				status_code=exc.status_code,
+				content={"detail": exc.detail},
+			)
+
+	return await call_next(request)
 
 # Incluimos las rutas
 app.include_router(establecimiento.router, prefix="/api/v1")

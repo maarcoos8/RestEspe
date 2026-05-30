@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
+import 'package:frontendflutter/core/auth_token_store.dart';
 
 import 'package:frontendflutter/data/models/auth_models.dart';
 import 'package:frontendflutter/data/services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
-  AuthProvider({AuthService? authService}) : _authService = authService ?? AuthService();
+  AuthProvider({AuthService? authService})
+    : _authService = authService ?? AuthService();
 
   final AuthService _authService;
 
@@ -23,6 +25,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       final user = await _authService.signInWithGoogle();
       _currentUser = user;
+      AuthTokenStore.setToken(user?.idToken);
       return user;
     } catch (error) {
       _errorMessage = error.toString();
@@ -35,6 +38,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> signOut() async {
     await _authService.signOut();
     _currentUser = null;
+    AuthTokenStore.clear();
     notifyListeners();
   }
 

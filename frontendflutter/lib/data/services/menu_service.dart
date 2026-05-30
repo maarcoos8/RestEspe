@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../../core/auth_token_store.dart';
 import '../../core/constants.dart';
 import '../models/categoria_dieta_model.dart';
 import '../models/item_menu_model.dart';
@@ -76,7 +77,7 @@ class MenuService {
       final uri = Uri.parse('${AppConstants.apiBaseUrl}/tipo_item_menu/');
       final response = await http.post(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: AuthTokenStore.withAuth({'Content-Type': 'application/json'}),
         body: jsonEncode({
           'id_establecimiento': idEstablecimiento,
           'nombre_tipo': nombreTipo,
@@ -107,7 +108,7 @@ class MenuService {
       );
       final response = await http.put(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: AuthTokenStore.withAuth({'Content-Type': 'application/json'}),
         body: jsonEncode({'nombre_tipo': nombreTipo}),
       );
 
@@ -130,7 +131,10 @@ class MenuService {
       final uri = Uri.parse(
         '${AppConstants.apiBaseUrl}/tipo_item_menu/$idTipoItem',
       );
-      final response = await http.delete(uri);
+      final response = await http.delete(
+        uri,
+        headers: AuthTokenStore.withAuth(const {}),
+      );
       if (response.statusCode == 200) return;
 
       throw Exception(
@@ -145,7 +149,10 @@ class MenuService {
   static Future<void> eliminarPlato(int idItem) async {
     try {
       final uri = Uri.parse('${AppConstants.apiBaseUrl}/item_menu/$idItem');
-      final response = await http.delete(uri);
+      final response = await http.delete(
+        uri,
+        headers: AuthTokenStore.withAuth(const {}),
+      );
       if (response.statusCode == 200) return;
 
       throw Exception(
@@ -165,7 +172,7 @@ class MenuService {
       final uri = Uri.parse('${AppConstants.apiBaseUrl}/item_menu/$idItem');
       final response = await http.put(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: AuthTokenStore.withAuth({'Content-Type': 'application/json'}),
         body: jsonEncode(data),
       );
 
@@ -195,7 +202,7 @@ class MenuService {
       final uri = Uri.parse('${AppConstants.apiBaseUrl}/item_menu/');
       final response = await http.post(
         uri,
-        headers: {'Content-Type': 'application/json'},
+        headers: AuthTokenStore.withAuth({'Content-Type': 'application/json'}),
         body: jsonEncode({
           'id_establecimiento': idEstablecimiento,
           'nombre_item_menu': nombreItemMenu,
@@ -229,7 +236,9 @@ class MenuService {
         final List<dynamic> jsonList =
             jsonDecode(response.body) as List<dynamic>;
         return jsonList
-            .map((json) => CategoriaDieta.fromJson(json as Map<String, dynamic>))
+            .map(
+              (json) => CategoriaDieta.fromJson(json as Map<String, dynamic>),
+            )
             .toList();
       }
 

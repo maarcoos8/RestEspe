@@ -2,6 +2,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/photography_model.dart';
 import '../../core/constants.dart';
+import '../../core/auth_token_store.dart';
 
 /// Servicio para gestionar fotografías de establecimientos.
 class PhotographyService {
@@ -12,12 +13,15 @@ class PhotographyService {
     int idEstablecimiento,
   ) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/fotografia/establecimiento/$idEstablecimiento'),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/fotografia/establecimiento/$idEstablecimiento'),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
         return jsonList
             .cast<Map<String, dynamic>>()
             .map((json) => PhotographyModel.fromJson(json))
@@ -33,9 +37,9 @@ class PhotographyService {
   /// Obtiene una fotografía por su ID.
   Future<PhotographyModel?> getPhotography(int idFoto) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/fotografia/$idFoto'),
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(Uri.parse('$baseUrl/fotografia/$idFoto'))
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         return PhotographyModel.fromJson(
@@ -53,9 +57,12 @@ class PhotographyService {
   /// Requiere el ID del usuario autenticado para validación de permisos.
   Future<bool> deletePhotography(int idFoto, int idUsuario) async {
     try {
-      final response = await http.delete(
-        Uri.parse('$baseUrl/fotografia/$idFoto?id_usuario=$idUsuario'),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .delete(
+            Uri.parse('$baseUrl/fotografia/$idFoto?id_usuario=$idUsuario'),
+            headers: AuthTokenStore.withAuth(const {}),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         return true;
@@ -64,7 +71,9 @@ class PhotographyService {
       } else if (response.statusCode == 404) {
         throw Exception('La fotografía no existe');
       } else {
-        throw Exception('Error al eliminar la fotografía: ${response.statusCode}');
+        throw Exception(
+          'Error al eliminar la fotografía: ${response.statusCode}',
+        );
       }
     } catch (e) {
       print('Error eliminando fotografía: $e');
@@ -72,4 +81,3 @@ class PhotographyService {
     }
   }
 }
-

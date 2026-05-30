@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:latlong2/latlong.dart';
 import '../models/restaurant_detail_model.dart';
 import '../../core/constants.dart';
+import '../../core/auth_token_store.dart';
 
 /// Servicio para obtener detalles de restaurantes desde el backend.
 class RestaurantDetailService {
@@ -39,7 +40,9 @@ class RestaurantDetailService {
         ),
         estadoVerificado: establecimientoJson['estado_verificado'] as bool?,
         ultimaVerificacion: establecimientoJson['ultima_verificacion'] != null
-            ? DateTime.parse(establecimientoJson['ultima_verificacion'] as String)
+            ? DateTime.parse(
+                establecimientoJson['ultima_verificacion'] as String,
+              )
             : null,
         verificadorId: establecimientoJson['verificador_id'] as int?,
         categoriasDieta: categoriasJson
@@ -51,7 +54,8 @@ class RestaurantDetailService {
             .map((tipo) => RestaurantType.fromJson(tipo))
             .toList(),
         puntuacionMedia: puntuacionJson?['puntuacion_media'] as double?,
-        numeroResenas: (puntuacionJson?['numero_resenas'] as num?)?.toInt() ?? 0,
+        numeroResenas:
+            (puntuacionJson?['numero_resenas'] as num?)?.toInt() ?? 0,
         imagenUrl: establecimientoJson['imagen_url'] as String?,
         propietarioId: establecimientoJson['propietario_id'] as int?,
       );
@@ -62,11 +66,13 @@ class RestaurantDetailService {
   }
 
   /// Obtiene los datos básicos del establecimiento.
-  Future<Map<String, dynamic>?> _getEstablecimientoBasic(int idEstablecimiento) async {
+  Future<Map<String, dynamic>?> _getEstablecimientoBasic(
+    int idEstablecimiento,
+  ) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/establecimiento/$idEstablecimiento'),
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(Uri.parse('$baseUrl/establecimiento/$idEstablecimiento'))
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
@@ -83,9 +89,13 @@ class RestaurantDetailService {
   /// Endpoint: GET /establecimiento_categoria/establecimiento/{id}
   Future<List<dynamic>> _getCategoriasDieta(int idEstablecimiento) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/establecimiento_categoria/establecimiento/$idEstablecimiento'),
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(
+            Uri.parse(
+              '$baseUrl/establecimiento_categoria/establecimiento/$idEstablecimiento',
+            ),
+          )
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as List<dynamic>;
@@ -102,9 +112,13 @@ class RestaurantDetailService {
   /// Endpoint: GET /establecimiento_tipo/establecimiento/{id}
   Future<List<dynamic>> _getTiposEstablecimiento(int idEstablecimiento) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/establecimiento_tipo/establecimiento/$idEstablecimiento'),
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(
+            Uri.parse(
+              '$baseUrl/establecimiento_tipo/establecimiento/$idEstablecimiento',
+            ),
+          )
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as List<dynamic>;
@@ -117,11 +131,17 @@ class RestaurantDetailService {
   }
 
   /// Obtiene la puntuación media del establecimiento.
-  Future<Map<String, dynamic>?> _getPuntuacionMedia(int idEstablecimiento) async {
+  Future<Map<String, dynamic>?> _getPuntuacionMedia(
+    int idEstablecimiento,
+  ) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/establecimiento/$idEstablecimiento/puntuacion-media'),
-      ).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(
+            Uri.parse(
+              '$baseUrl/establecimiento/$idEstablecimiento/puntuacion-media',
+            ),
+          )
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
@@ -137,15 +157,19 @@ class RestaurantDetailService {
   /// Endpoint: PUT /establecimiento/{id}
   Future<bool> verifyEstablishment(int idEstablecimiento, int usuarioId) async {
     try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/establecimiento/$idEstablecimiento'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'estado_verificado': true,
-          'verificador_id': usuarioId,
-          // El backend se encarga de agregar la fecha actual
-        }),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .put(
+            Uri.parse('$baseUrl/establecimiento/$idEstablecimiento'),
+            headers: AuthTokenStore.withAuth({
+              'Content-Type': 'application/json',
+            }),
+            body: jsonEncode({
+              'estado_verificado': true,
+              'verificador_id': usuarioId,
+              // El backend se encarga de agregar la fecha actual
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         return true;

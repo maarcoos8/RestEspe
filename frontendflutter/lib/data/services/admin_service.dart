@@ -6,9 +6,18 @@ import '../models/categoria_dieta_model.dart';
 import '../models/rol_model.dart';
 import '../models/tipo_establecimiento_model.dart';
 import '../../core/constants.dart';
+import '../../core/auth_token_store.dart';
 
 /// Servicio para obtener datos de administración de la aplicación.
 class AdminService {
+  static Map<String, String> _authHeaders({bool json = false}) {
+    final base = <String, String>{};
+    if (json) {
+      base['Content-Type'] = 'application/json';
+    }
+    return AuthTokenStore.withAuth(base);
+  }
+
   static String _extractErrorMessage(http.Response response, String fallback) {
     try {
       final decoded = jsonDecode(response.body);
@@ -86,7 +95,7 @@ class AdminService {
     final uri = Uri.parse('${AppConstants.apiBaseUrl}/usuario/$idUsuario');
     final response = await http.put(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: _authHeaders(json: true),
       body: jsonEncode({'id_rol': idRol}),
     );
     if (response.statusCode != 200) {
@@ -99,7 +108,7 @@ class AdminService {
   /// Elimina un usuario.
   static Future<void> deleteUsuario(int idUsuario) async {
     final uri = Uri.parse('${AppConstants.apiBaseUrl}/usuario/$idUsuario');
-    final response = await http.delete(uri);
+    final response = await http.delete(uri, headers: _authHeaders());
     if (response.statusCode != 200) {
       throw Exception(
         'Error al eliminar usuario: $idUsuario (status: ${response.statusCode})',
@@ -250,7 +259,7 @@ class AdminService {
     }
     final response = await http.post(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: _authHeaders(json: true),
       body: jsonEncode(body),
     );
     if (response.statusCode != 201) {
@@ -263,7 +272,7 @@ class AdminService {
   /// Elimina una categoría de dieta por id.
   static Future<void> deleteCategoriaDieta(int id) async {
     final uri = Uri.parse('${AppConstants.apiBaseUrl}/categoria_dieta/$id');
-    final response = await http.delete(uri);
+    final response = await http.delete(uri, headers: _authHeaders());
     if (response.statusCode != 200) {
       throw Exception(
         'Error al eliminar categoría de dieta: $id (status: ${response.statusCode})',
@@ -284,7 +293,7 @@ class AdminService {
     }
     final response = await http.put(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: _authHeaders(json: true),
       body: jsonEncode(body),
     );
     if (response.statusCode != 200) {
@@ -302,7 +311,7 @@ class AdminService {
     final uri = Uri.parse('${AppConstants.apiBaseUrl}/tipo_establecimiento/');
     final response = await http.post(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: _authHeaders(json: true),
       body: jsonEncode({'nombre_categoria': nombreCategoria}),
     );
     if (response.statusCode != 201) {
@@ -320,7 +329,7 @@ class AdminService {
     final uri = Uri.parse(
       '${AppConstants.apiBaseUrl}/tipo_establecimiento/$id',
     );
-    final response = await http.delete(uri);
+    final response = await http.delete(uri, headers: _authHeaders());
     if (response.statusCode != 200) {
       throw Exception(
         'Error al eliminar tipo de establecimiento: $id (status: ${response.statusCode})',
@@ -338,7 +347,7 @@ class AdminService {
     );
     final response = await http.put(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: _authHeaders(json: true),
       body: jsonEncode({'nombre_categoria': nombreCategoria}),
     );
     if (response.statusCode != 200) {
@@ -362,7 +371,7 @@ class AdminService {
 
     final response = await http.post(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: _authHeaders(json: true),
       body: jsonEncode(body),
     );
 
@@ -397,7 +406,7 @@ class AdminService {
     final uri = Uri.parse(
       '${AppConstants.apiBaseUrl}/establecimiento/$idEstablecimiento',
     );
-    final response = await http.delete(uri);
+    final response = await http.delete(uri, headers: _authHeaders());
     if (response.statusCode != 200) {
       throw Exception(
         _extractErrorMessage(
@@ -427,7 +436,7 @@ class AdminService {
 
     final response = await http.put(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: _authHeaders(json: true),
       body: jsonEncode(body),
     );
 
@@ -475,7 +484,7 @@ class AdminService {
     final uri = Uri.parse(
       '${AppConstants.apiBaseUrl}/establecimiento_tipo/establecimiento/$idEstablecimiento/tipo/$idTipo',
     );
-    final response = await http.delete(uri);
+    final response = await http.delete(uri, headers: _authHeaders());
     if (response.statusCode != 200) {
       throw Exception(
         _extractErrorMessage(
@@ -494,7 +503,7 @@ class AdminService {
     final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento_tipo/');
     final response = await http.post(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: _authHeaders(json: true),
       body: jsonEncode({
         'id_establecimiento': idEstablecimiento,
         'id_tipo_establecimiento': idTipo,
