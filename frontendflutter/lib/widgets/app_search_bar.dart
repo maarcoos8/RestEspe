@@ -9,7 +9,18 @@ import 'map_filters_sheet.dart';
 /// Barra de búsqueda para la pantalla de mapa.
 /// Permite escribir texto pero sin ejecutar búsqueda aún.
 class AppSearchBar extends StatefulWidget {
-  const AppSearchBar({super.key});
+  const AppSearchBar({
+    super.key,
+    this.hintText = 'Busca establecimientos o ubicaciones',
+    this.enableSuggestions = true,
+    this.showLocationSuggestions = true,
+    this.onQueryChanged,
+  });
+
+  final String hintText;
+  final bool enableSuggestions;
+  final bool showLocationSuggestions;
+  final ValueChanged<String>? onQueryChanged;
 
   @override
   State<AppSearchBar> createState() => _AppSearchBarState();
@@ -58,8 +69,15 @@ class _AppSearchBarState extends State<AppSearchBar> {
   }
 
   void _handleTextChanged() {
-    _searchProvider?.onQueryChanged(_searchController.text);
-    _syncOverlay();
+    final value = _searchController.text;
+    widget.onQueryChanged?.call(value);
+
+    if (widget.enableSuggestions) {
+      _searchProvider?.onQueryChanged(value);
+      _syncOverlay();
+    } else {
+      _removeOverlay();
+    }
   }
 
   void _handleProviderChanged() {
@@ -72,6 +90,11 @@ class _AppSearchBarState extends State<AppSearchBar> {
   }
 
   void _syncOverlay() {
+    if (!widget.enableSuggestions) {
+      _removeOverlay();
+      return;
+    }
+
     final provider = _searchProvider;
     if (provider == null) {
       return;
@@ -114,6 +137,7 @@ class _AppSearchBarState extends State<AppSearchBar> {
                       width: MediaQuery.of(overlayContext).size.width - 32,
                       child: _SearchResultsPanel(
                         provider: provider,
+                        showLocationSuggestions: widget.showLocationSuggestions,
                         onLocationSelected: (location) {
                           provider.selectLocation(location);
                           _dismissOverlay();
@@ -203,7 +227,7 @@ class _AppSearchBarState extends State<AppSearchBar> {
                 focusNode: _focusNode,
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'Busca establecimientos o ubicaciones',
+                  hintText: widget.hintText,
                   hintStyle: Theme.of(context).textTheme.titleSmall?.copyWith(
                     color: const Color(AppColors.lightText),
                     fontWeight: FontWeight.w400,
@@ -266,18 +290,21 @@ class _AppSearchBarState extends State<AppSearchBar> {
 class _SearchResultsPanel extends StatelessWidget {
   const _SearchResultsPanel({
     required this.provider,
+    required this.showLocationSuggestions,
     required this.onLocationSelected,
     required this.onRestaurantSelected,
   });
 
   final SearchProvider provider;
+  final bool showLocationSuggestions;
   final ValueChanged<SearchLocationResult> onLocationSelected;
   final ValueChanged<SearchRestaurantResult> onRestaurantSelected;
 
   @override
   Widget build(BuildContext context) {
-    final hasResults =
-        provider.locations.isNotEmpty || provider.restaurants.isNotEmpty;
+    final hasLocationResults =
+        showLocationSuggestions && provider.locations.isNotEmpty;
+    final hasResults = hasLocationResults || provider.restaurants.isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
@@ -323,7 +350,7 @@ class _SearchResultsPanel extends StatelessWidget {
                     ),
                   ),
                 ],
-                if (provider.locations.isNotEmpty) ...[
+                if (hasLocationResults) ...[
                   _SectionHeader(title: '📍 Ubicaciones'),
                   ...provider.locations.map(
                     (location) => _SearchItem(

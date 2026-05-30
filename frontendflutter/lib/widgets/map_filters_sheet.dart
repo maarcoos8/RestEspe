@@ -189,7 +189,7 @@ class _MapFiltersSheetState extends State<MapFiltersSheet> {
                               _buildSectionTitle(
                                 context,
                                 'Dietas',
-                                'Selecciona una o varias dietas para afinar el mapa.',
+                                'Selecciona una o varias dietas.',
                               ),
                               const SizedBox(height: 12),
                               if (options.dietas.isEmpty)
@@ -493,15 +493,18 @@ class _MapFiltersSheetState extends State<MapFiltersSheet> {
   Widget _buildHeader(BuildContext context) {
     return Row(
       children: [
+        const SizedBox(width: 48),
         Expanded(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 'Filtros del mapa',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
+                  color: const Color(AppColors.primaryOrange),
                 ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 6),
               Text(
@@ -509,6 +512,7 @@ class _MapFiltersSheetState extends State<MapFiltersSheet> {
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: const Color(AppColors.lightText),
                 ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),

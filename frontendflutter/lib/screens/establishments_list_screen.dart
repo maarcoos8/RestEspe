@@ -2,12 +2,16 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
 
 import '../core/constants.dart';
 import '../data/models/admin_establishment_model.dart';
 import '../data/models/restaurant_detail_model.dart';
+import '../data/models/search_models.dart';
 import '../data/services/admin_service.dart';
 import '../data/services/restaurant_detail_service.dart';
+import '../providers/search_provider.dart';
+import '../widgets/app_search_bar.dart';
 import '../widgets/restaurant_card_widget.dart';
 import 'restaurant_detail_screen.dart';
 
@@ -27,7 +31,6 @@ class _EstablishmentsListScreenState extends State<EstablishmentsListScreen> {
   static const int _pageSize = 10;
 
   final ScrollController _scrollController = ScrollController();
-  final TextEditingController _filterController = TextEditingController();
   final RestaurantDetailService _restaurantDetailService =
       RestaurantDetailService();
   final List<RestaurantDetail> _establishments = [];
@@ -41,20 +44,36 @@ class _EstablishmentsListScreenState extends State<EstablishmentsListScreen> {
   String? _errorMessage;
   int _skip = 0;
   Position? _currentLocation;
+  SearchProvider? _searchProvider;
+  RestaurantMapFilters _lastAppliedFilters = const RestaurantMapFilters();
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    _filterController.addListener(_onFilterTextChanged);
     _initialize();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final provider = context.read<SearchProvider>();
+    if (_searchProvider == provider) {
+      return;
+    }
+
+    _searchProvider?.removeListener(_handleSearchProviderChanged);
+    _searchProvider = provider;
+    _lastAppliedFilters = provider.filters;
+    _searchProvider?.addListener(_handleSearchProviderChanged);
   }
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _searchProvider?.removeListener(_handleSearchProviderChanged);
     _scrollController.dispose();
-    _filterController.dispose();
     super.dispose();
   }
 
@@ -113,12 +132,12 @@ class _EstablishmentsListScreenState extends State<EstablishmentsListScreen> {
     }
   }
 
-  void _onFilterTextChanged() {
+  void _onFilterTextChanged(String value) {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 400), () {
       if (!mounted) return;
 
-      final nextFilter = _filterController.text.trim();
+      final nextFilter = value.trim();
       if (nextFilter == _appliedFilter) {
         return;
       }
@@ -128,6 +147,42 @@ class _EstablishmentsListScreenState extends State<EstablishmentsListScreen> {
       });
       _loadFirstPage();
     });
+  }
+
+  void _handleSearchProviderChanged() {
+    final provider = _searchProvider;
+    if (provider == null) {
+      return;
+    }
+
+    final currentFilters = provider.filters;
+    if (_areFiltersEqual(_lastAppliedFilters, currentFilters)) {
+      return;
+    }
+
+    _lastAppliedFilters = currentFilters;
+    _loadFirstPage();
+  }
+
+  bool _areFiltersEqual(RestaurantMapFilters left, RestaurantMapFilters right) {
+    return left.onlyVerified == right.onlyVerified &&
+        left.minimumRating == right.minimumRating &&
+        _sameIntLists(left.selectedDietIds, right.selectedDietIds) &&
+        _sameIntLists(left.selectedTypeIds, right.selectedTypeIds);
+  }
+
+  bool _sameIntLists(List<int> left, List<int> right) {
+    if (left.length != right.length) {
+      return false;
+    }
+    final sortedLeft = [...left]..sort();
+    final sortedRight = [...right]..sort();
+    for (int i = 0; i < sortedLeft.length; i++) {
+      if (sortedLeft[i] != sortedRight[i]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   Future<void> _loadFirstPage() async {
@@ -141,10 +196,15 @@ class _EstablishmentsListScreenState extends State<EstablishmentsListScreen> {
     });
 
     try {
+      final activeFilters = _searchProvider?.filters;
       final items = await AdminService.getEstablecimientos(
         skip: 0,
         limit: _pageSize,
         nombre: _appliedFilter,
+        categoriaDietaIds: activeFilters?.selectedDietIds,
+        tipoEstablecimientoIds: activeFilters?.selectedTypeIds,
+        soloVerificados: activeFilters?.onlyVerified == true ? true : null,
+        puntuacionMediaMinima: activeFilters?.minimumRating,
       );
       final details = await _loadRestaurantDetails(items);
 
@@ -174,10 +234,15 @@ class _EstablishmentsListScreenState extends State<EstablishmentsListScreen> {
     });
 
     try {
+      final activeFilters = _searchProvider?.filters;
       final items = await AdminService.getEstablecimientos(
         skip: _skip,
         limit: _pageSize,
         nombre: _appliedFilter,
+        categoriaDietaIds: activeFilters?.selectedDietIds,
+        tipoEstablecimientoIds: activeFilters?.selectedTypeIds,
+        soloVerificados: activeFilters?.onlyVerified == true ? true : null,
+        puntuacionMediaMinima: activeFilters?.minimumRating,
       );
       final details = await _loadRestaurantDetails(items);
 
@@ -296,31 +361,37 @@ class _EstablishmentsListScreenState extends State<EstablishmentsListScreen> {
             const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: TextField(
-                controller: _filterController,
-                textInputAction: TextInputAction.search,
-                decoration: InputDecoration(
-                  hintText: 'Filtrar por nombre',
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  filled: true,
-                  fillColor: const Color(AppColors.white),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0x1A000000)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: Color(0x1A000000)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: Color(AppColors.primaryOrange),
+              child: AppSearchBar(
+                hintText: 'Filtrar establecimientos por nombre',
+                enableSuggestions: false,
+                showLocationSuggestions: false,
+                onQueryChanged: _onFilterTextChanged,
+              ),
+            ),
+            if (_searchProvider?.hasActiveFilters == true)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Align(
+                  alignment: Alignment.center,
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      _searchProvider?.clearFilters();
+                    },
+                    icon: const Icon(Icons.filter_alt_off_rounded, size: 18),
+                    label: const Text('Quitar filtros'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(AppColors.primaryOrange),
+                      foregroundColor: const Color(AppColors.white),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      textStyle: Theme.of(context).textTheme.labelLarge
+                          ?.copyWith(fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
               ),
-            ),
             if (_currentLocation != null)
               const Padding(
                 padding: EdgeInsets.fromLTRB(24, 10, 24, 0),

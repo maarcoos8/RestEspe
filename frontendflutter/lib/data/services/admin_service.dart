@@ -28,8 +28,13 @@ class AdminService {
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {
-        final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
-        return jsonList.map((json) => AdminUserModel.fromJson(json as Map<String, dynamic>)).toList();
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        return jsonList
+            .map(
+              (json) => AdminUserModel.fromJson(json as Map<String, dynamic>),
+            )
+            .toList();
       }
       throw Exception('Error al obtener usuarios: ${response.statusCode}');
     } catch (e) {
@@ -44,9 +49,13 @@ class AdminService {
       final usuarios = await getUsuarios();
       final lowerQuery = query.toLowerCase();
       return usuarios
-          .where((u) => u.idRol == 2 && // rolPropietario = 2
-                        ((u.nombreCompleto?.toLowerCase().contains(lowerQuery) ?? false) ||
-                         (u.email.toLowerCase().contains(lowerQuery))))
+          .where(
+            (u) =>
+                u.idRol == 2 && // rolPropietario = 2
+                ((u.nombreCompleto?.toLowerCase().contains(lowerQuery) ??
+                        false) ||
+                    (u.email.toLowerCase().contains(lowerQuery))),
+          )
           .toList();
     } catch (e) {
       throw Exception('Error al buscar usuarios: $e');
@@ -60,8 +69,11 @@ class AdminService {
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {
-        final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
-        return jsonList.map((json) => RolModel.fromJson(json as Map<String, dynamic>)).toList();
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        return jsonList
+            .map((json) => RolModel.fromJson(json as Map<String, dynamic>))
+            .toList();
       }
       throw Exception('Error al obtener roles: ${response.statusCode}');
     } catch (e) {
@@ -78,7 +90,9 @@ class AdminService {
       body: jsonEncode({'id_rol': idRol}),
     );
     if (response.statusCode != 200) {
-      throw Exception('Error al actualizar usuario: $idUsuario (status: ${response.statusCode})');
+      throw Exception(
+        'Error al actualizar usuario: $idUsuario (status: ${response.statusCode})',
+      );
     }
   }
 
@@ -87,7 +101,9 @@ class AdminService {
     final uri = Uri.parse('${AppConstants.apiBaseUrl}/usuario/$idUsuario');
     final response = await http.delete(uri);
     if (response.statusCode != 200) {
-      throw Exception('Error al eliminar usuario: $idUsuario (status: ${response.statusCode})');
+      throw Exception(
+        'Error al eliminar usuario: $idUsuario (status: ${response.statusCode})',
+      );
     }
   }
 
@@ -98,10 +114,17 @@ class AdminService {
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {
-        final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
-        return jsonList.map((json) => CategoriaDieta.fromJson(json as Map<String, dynamic>)).toList();
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        return jsonList
+            .map(
+              (json) => CategoriaDieta.fromJson(json as Map<String, dynamic>),
+            )
+            .toList();
       } else {
-        throw Exception('Error al obtener categorías de dieta: ${response.statusCode}');
+        throw Exception(
+          'Error al obtener categorías de dieta: ${response.statusCode}',
+        );
       }
     } catch (e) {
       throw Exception('Error al obtener categorías de dieta: $e');
@@ -115,10 +138,18 @@ class AdminService {
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {
-        final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
-        return jsonList.map((json) => TipoEstablecimiento.fromJson(json as Map<String, dynamic>)).toList();
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+        return jsonList
+            .map(
+              (json) =>
+                  TipoEstablecimiento.fromJson(json as Map<String, dynamic>),
+            )
+            .toList();
       } else {
-        throw Exception('Error al obtener tipos de establecimiento: ${response.statusCode}');
+        throw Exception(
+          'Error al obtener tipos de establecimiento: ${response.statusCode}',
+        );
       }
     } catch (e) {
       throw Exception('Error al obtener tipos de establecimiento: $e');
@@ -131,38 +162,87 @@ class AdminService {
     int limit = 10,
     String? nombre,
     int? propietarioId,
+    List<int>? categoriaDietaIds,
+    List<int>? tipoEstablecimientoIds,
+    bool? soloVerificados,
+    double? puntuacionMediaMinima,
   }) async {
     try {
-      final queryParameters = <String, String>{
-        'skip': skip.toString(),
-        'limit': limit.toString(),
+      final queryParametersAll = <String, List<String>>{
+        'skip': [skip.toString()],
+        'limit': [limit.toString()],
       };
       if (nombre != null && nombre.trim().isNotEmpty) {
-        queryParameters['nombre'] = nombre.trim();
+        queryParametersAll['nombre'] = [nombre.trim()];
       }
       if (propietarioId != null) {
-        queryParameters['propietario_id'] = propietarioId.toString();
+        queryParametersAll['propietario_id'] = [propietarioId.toString()];
+      }
+      if (categoriaDietaIds != null && categoriaDietaIds.isNotEmpty) {
+        queryParametersAll['categoria_dieta_ids'] = categoriaDietaIds
+            .map((id) => id.toString())
+            .toList(growable: false);
+      }
+      if (tipoEstablecimientoIds != null && tipoEstablecimientoIds.isNotEmpty) {
+        queryParametersAll['tipo_establecimiento_ids'] = tipoEstablecimientoIds
+            .map((id) => id.toString())
+            .toList(growable: false);
+      }
+      if (soloVerificados == true) {
+        queryParametersAll['solo_verificados'] = ['true'];
+      }
+      if (puntuacionMediaMinima != null) {
+        queryParametersAll['puntuacion_media_minima'] = [
+          puntuacionMediaMinima.toString(),
+        ];
       }
 
-      final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento/filtrar')
-          .replace(queryParameters: queryParameters);
+      final uri = Uri.parse(
+        '${AppConstants.apiBaseUrl}/establecimiento/filtrar',
+      ).replace(query: _encodeRepeatedQueryParameters(queryParametersAll));
       final response = await http.get(uri);
 
       if (response.statusCode == 200) {
-        final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
         return jsonList
-            .map((json) => AdminEstablishmentModel.fromJson(json as Map<String, dynamic>))
+            .map(
+              (json) => AdminEstablishmentModel.fromJson(
+                json as Map<String, dynamic>,
+              ),
+            )
             .toList();
       }
 
-      throw Exception('Error al obtener establecimientos: ${response.statusCode}');
+      throw Exception(
+        'Error al obtener establecimientos: ${response.statusCode}',
+      );
     } catch (e) {
       throw Exception('Error al obtener establecimientos: $e');
     }
   }
 
+  static String _encodeRepeatedQueryParameters(
+    Map<String, List<String>> parameters,
+  ) {
+    final parts = <String>[];
+
+    for (final entry in parameters.entries) {
+      for (final value in entry.value) {
+        parts.add(
+          '${Uri.encodeQueryComponent(entry.key)}=${Uri.encodeQueryComponent(value)}',
+        );
+      }
+    }
+
+    return parts.join('&');
+  }
+
   /// Crea una nueva categoría de dieta.
-  static Future<void> createCategoriaDieta(String nombreDieta, {String? colorHex}) async {
+  static Future<void> createCategoriaDieta(
+    String nombreDieta, {
+    String? colorHex,
+  }) async {
     final uri = Uri.parse('${AppConstants.apiBaseUrl}/categoria_dieta/');
     final body = {'nombre_dieta': nombreDieta};
     if (colorHex != null) {
@@ -174,7 +254,9 @@ class AdminService {
       body: jsonEncode(body),
     );
     if (response.statusCode != 201) {
-      throw Exception(_extractErrorMessage(response, 'Error al crear categoría de dieta'));
+      throw Exception(
+        _extractErrorMessage(response, 'Error al crear categoría de dieta'),
+      );
     }
   }
 
@@ -183,12 +265,18 @@ class AdminService {
     final uri = Uri.parse('${AppConstants.apiBaseUrl}/categoria_dieta/$id');
     final response = await http.delete(uri);
     if (response.statusCode != 200) {
-      throw Exception('Error al eliminar categoría de dieta: $id (status: ${response.statusCode})');
+      throw Exception(
+        'Error al eliminar categoría de dieta: $id (status: ${response.statusCode})',
+      );
     }
   }
 
   /// Actualiza una categoría de dieta.
-  static Future<void> updateCategoriaDieta(int id, String nombreDieta, {String? colorHex}) async {
+  static Future<void> updateCategoriaDieta(
+    int id,
+    String nombreDieta, {
+    String? colorHex,
+  }) async {
     final uri = Uri.parse('${AppConstants.apiBaseUrl}/categoria_dieta/$id');
     final body = {'nombre_dieta': nombreDieta};
     if (colorHex != null) {
@@ -200,7 +288,12 @@ class AdminService {
       body: jsonEncode(body),
     );
     if (response.statusCode != 200) {
-      throw Exception(_extractErrorMessage(response, 'Error al actualizar categoría de dieta'));
+      throw Exception(
+        _extractErrorMessage(
+          response,
+          'Error al actualizar categoría de dieta',
+        ),
+      );
     }
   }
 
@@ -213,39 +306,58 @@ class AdminService {
       body: jsonEncode({'nombre_categoria': nombreCategoria}),
     );
     if (response.statusCode != 201) {
-      throw Exception(_extractErrorMessage(response, 'Error al crear tipo de establecimiento'));
+      throw Exception(
+        _extractErrorMessage(
+          response,
+          'Error al crear tipo de establecimiento',
+        ),
+      );
     }
   }
 
   /// Elimina un tipo de establecimiento por id.
   static Future<void> deleteTipoEstablecimiento(int id) async {
-    final uri = Uri.parse('${AppConstants.apiBaseUrl}/tipo_establecimiento/$id');
+    final uri = Uri.parse(
+      '${AppConstants.apiBaseUrl}/tipo_establecimiento/$id',
+    );
     final response = await http.delete(uri);
     if (response.statusCode != 200) {
-      throw Exception('Error al eliminar tipo de establecimiento: $id (status: ${response.statusCode})');
+      throw Exception(
+        'Error al eliminar tipo de establecimiento: $id (status: ${response.statusCode})',
+      );
     }
   }
 
   /// Actualiza un tipo de establecimiento.
-  static Future<void> updateTipoEstablecimiento(int id, String nombreCategoria) async {
-    final uri = Uri.parse('${AppConstants.apiBaseUrl}/tipo_establecimiento/$id');
+  static Future<void> updateTipoEstablecimiento(
+    int id,
+    String nombreCategoria,
+  ) async {
+    final uri = Uri.parse(
+      '${AppConstants.apiBaseUrl}/tipo_establecimiento/$id',
+    );
     final response = await http.put(
       uri,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'nombre_categoria': nombreCategoria}),
     );
     if (response.statusCode != 200) {
-      throw Exception(_extractErrorMessage(response, 'Error al actualizar tipo de establecimiento'));
+      throw Exception(
+        _extractErrorMessage(
+          response,
+          'Error al actualizar tipo de establecimiento',
+        ),
+      );
     }
   }
 
   /// Crea un nuevo establecimiento.
   static Future<int> createEstablishment(dynamic formData) async {
     final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento/');
-    
+
     // formData debe tener método toJson() que devuelva Map<String, dynamic>
-    final body = formData is Map<String, dynamic> 
-        ? formData 
+    final body = formData is Map<String, dynamic>
+        ? formData
         : (formData.toJson() as Map<String, dynamic>);
 
     final response = await http.post(
@@ -272,20 +384,27 @@ class AdminService {
       }
     } else {
       throw Exception(
-        _extractErrorMessage(response, 'Error al crear establecimiento (${response.statusCode})'),
+        _extractErrorMessage(
+          response,
+          'Error al crear establecimiento (${response.statusCode})',
+        ),
       );
     }
   }
 
   /// Elimina un establecimiento por id.
   static Future<void> deleteEstablecimiento(int idEstablecimiento) async {
-    final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento/$idEstablecimiento');
+    final uri = Uri.parse(
+      '${AppConstants.apiBaseUrl}/establecimiento/$idEstablecimiento',
+    );
     final response = await http.delete(uri);
     if (response.statusCode != 200) {
-      throw Exception(_extractErrorMessage(
-        response,
-        'Error al eliminar establecimiento: $idEstablecimiento (status: ${response.statusCode})',
-      ));
+      throw Exception(
+        _extractErrorMessage(
+          response,
+          'Error al eliminar establecimiento: $idEstablecimiento (status: ${response.statusCode})',
+        ),
+      );
     }
   }
 
@@ -295,11 +414,13 @@ class AdminService {
     dynamic formData,
     List<int> tiposEstablecimientoIds,
   ) async {
-    final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento/$idEstablecimiento');
-    
+    final uri = Uri.parse(
+      '${AppConstants.apiBaseUrl}/establecimiento/$idEstablecimiento',
+    );
+
     // formData debe tener método toJson() que devuelva Map<String, dynamic>
-    final body = formData is Map<String, dynamic> 
-        ? formData 
+    final body = formData is Map<String, dynamic>
+        ? formData
         : (formData.toJson() as Map<String, dynamic>);
     // Incluir tipos en el body para que el backend haga la actualización atómica
     body['tipos_establecimiento_ids'] = tiposEstablecimientoIds;
@@ -312,20 +433,28 @@ class AdminService {
 
     if (response.statusCode != 200) {
       throw Exception(
-        _extractErrorMessage(response, 'Error al actualizar establecimiento (${response.statusCode})'),
+        _extractErrorMessage(
+          response,
+          'Error al actualizar establecimiento (${response.statusCode})',
+        ),
       );
     }
   }
 
   /// Elimina todos los tipos de un establecimiento.
-  static Future<void> deleteAllEstablecimientoTipos(int idEstablecimiento) async {
+  static Future<void> deleteAllEstablecimientoTipos(
+    int idEstablecimiento,
+  ) async {
     try {
-      final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento_tipo/establecimiento/$idEstablecimiento');
+      final uri = Uri.parse(
+        '${AppConstants.apiBaseUrl}/establecimiento_tipo/establecimiento/$idEstablecimiento',
+      );
       final response = await http.get(uri);
-      
+
       if (response.statusCode == 200) {
-        final List<dynamic> jsonList = jsonDecode(response.body) as List<dynamic>;
-        
+        final List<dynamic> jsonList =
+            jsonDecode(response.body) as List<dynamic>;
+
         for (final tipoJson in jsonList) {
           final tipo = tipoJson as Map<String, dynamic>;
           final idTipo = tipo['id_tipo_establecimiento'] as int;
@@ -339,18 +468,29 @@ class AdminService {
   }
 
   /// Elimina un tipo específico de establecimiento.
-  static Future<void> _deleteEstablecimientoTipo(int idEstablecimiento, int idTipo) async {
-    final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento_tipo/establecimiento/$idEstablecimiento/tipo/$idTipo');
+  static Future<void> _deleteEstablecimientoTipo(
+    int idEstablecimiento,
+    int idTipo,
+  ) async {
+    final uri = Uri.parse(
+      '${AppConstants.apiBaseUrl}/establecimiento_tipo/establecimiento/$idEstablecimiento/tipo/$idTipo',
+    );
     final response = await http.delete(uri);
     if (response.statusCode != 200) {
       throw Exception(
-        _extractErrorMessage(response, 'Error al eliminar tipo de establecimiento'),
+        _extractErrorMessage(
+          response,
+          'Error al eliminar tipo de establecimiento',
+        ),
       );
     }
   }
 
   /// Crea una relación entre un establecimiento y un tipo.
-  static Future<void> createEstablecimientoTipo(int idEstablecimiento, int idTipo) async {
+  static Future<void> createEstablecimientoTipo(
+    int idEstablecimiento,
+    int idTipo,
+  ) async {
     final uri = Uri.parse('${AppConstants.apiBaseUrl}/establecimiento_tipo/');
     final response = await http.post(
       uri,
@@ -363,7 +503,10 @@ class AdminService {
 
     if (response.statusCode != 201) {
       throw Exception(
-        _extractErrorMessage(response, 'Error al asignar tipo de establecimiento'),
+        _extractErrorMessage(
+          response,
+          'Error al asignar tipo de establecimiento',
+        ),
       );
     }
   }
