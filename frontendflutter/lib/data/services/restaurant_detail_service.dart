@@ -153,9 +153,13 @@ class RestaurantDetailService {
     }
   }
 
-  /// Verifica un establecimiento (marca como verificado con id del usuario y fecha actual).
+  /// Cambia el estado de verificación de un establecimiento.
   /// Endpoint: PUT /establecimiento/{id}
-  Future<bool> verifyEstablishment(int idEstablecimiento, int usuarioId) async {
+  Future<bool> setVerificationState(
+    int idEstablecimiento, {
+    required bool verified,
+    int? verifierId,
+  }) async {
     try {
       final response = await http
           .put(
@@ -164,9 +168,8 @@ class RestaurantDetailService {
               'Content-Type': 'application/json',
             }),
             body: jsonEncode({
-              'estado_verificado': true,
-              'verificador_id': usuarioId,
-              // El backend se encarga de agregar la fecha actual
+              'estado_verificado': verified,
+              'verificador_id': verifierId,
             }),
           )
           .timeout(const Duration(seconds: 10));
@@ -180,6 +183,15 @@ class RestaurantDetailService {
       print('Error en verify: $e');
       return false;
     }
+  }
+
+  /// Verifica un establecimiento (marca como verificado con id del usuario y fecha actual).
+  Future<bool> verifyEstablishment(int idEstablecimiento, int usuarioId) async {
+    return setVerificationState(
+      idEstablecimiento,
+      verified: true,
+      verifierId: usuarioId,
+    );
   }
 
   LatLng? _parseCoordinates(dynamic lat, dynamic lng) {

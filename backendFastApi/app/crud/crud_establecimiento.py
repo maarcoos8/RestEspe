@@ -184,7 +184,7 @@ def update_establecimiento(
     for field, value in data.items():
         setattr(db_obj, field, value)
 
-    if "verificador_id" in data:
+    if data.get("estado_verificado") is True and data.get("verificador_id") is not None:
         db_obj.ultima_verificacion = datetime.utcnow()
 
     db.add(db_obj)

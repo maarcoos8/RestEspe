@@ -232,6 +232,104 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     await _loadMenu();
   }
 
+  Future<void> _handleMenuVerificationFlow({
+    required bool wasVerifiedBefore,
+    required String actionLabel,
+  }) async {
+    if (!wasVerifiedBefore || !mounted) return;
+
+    final unsetSuccess = await _restaurantDetailService.setVerificationState(
+      _currentRestaurant.idEstablecimiento,
+      verified: false,
+      verifierId: null,
+    );
+
+    if (!unsetSuccess) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo marcar el establecimiento como no verificado'),
+          backgroundColor: Color(AppColors.errorRed),
+        ),
+      );
+      return;
+    }
+
+    final shouldVerifyAgain = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Establecimiento sin verificar'),
+          content: Text(
+            'Has $actionLabel un plato en un establecimiento verificado. Al guardar, el establecimiento pasará a estar sin verificar. ¿Quieres verificarlo de nuevo ahora?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('No verificar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(AppColors.primaryGreen),
+              ),
+              child: const Text('Verificar de nuevo'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || shouldVerifyAgain == null) return;
+
+    bool verifiedAgain = false;
+    if (shouldVerifyAgain) {
+      final authProvider = context.read<AuthProvider>();
+      final currentUser = authProvider.currentUser;
+      if (currentUser == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo volver a verificar el establecimiento'),
+            backgroundColor: Color(AppColors.errorRed),
+          ),
+        );
+        return;
+      }
+
+      verifiedAgain = await _restaurantDetailService.verifyEstablishment(
+        _currentRestaurant.idEstablecimiento,
+        currentUser.idUsuario,
+      );
+
+      if (!verifiedAgain) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo volver a verificar el establecimiento'),
+            backgroundColor: Color(AppColors.errorRed),
+          ),
+        );
+        return;
+      }
+    }
+
+    await _reloadRestaurantData();
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          verifiedAgain
+              ? 'Establecimiento verificado de nuevo'
+              : 'Establecimiento marcado como no verificado',
+        ),
+        backgroundColor: const Color(AppColors.successGreen),
+      ),
+    );
+  }
+
   /// Carga el men+¦ del establecimiento
   Future<void> _loadMenu() async {
     if (!mounted) return;
@@ -1122,7 +1220,6 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     final canManage = currentUser != null &&
         (RoleConstants.isAdmin(currentUser.idRol) ||
             currentUser.idUsuario == _currentRestaurant.propietarioId);
-
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
@@ -1240,6 +1337,8 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                         color: Color(AppColors.errorRed),
                       ),
                       onPressed: () async {
+                        final wasVerifiedBefore =
+                            _currentRestaurant.estadoVerificado == true;
                         final confirm = await showDialog<bool>(
                           context: context,
                           builder: (ctx) {
@@ -1271,6 +1370,10 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                         try {
                           await MenuService.eliminarPlato(plato.idItemMenu);
                           await _refreshAfterMenuMutation();
+                          await _handleMenuVerificationFlow(
+                            wasVerifiedBefore: wasVerifiedBefore,
+                            actionLabel: 'eliminado',
+                          );
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -1889,6 +1992,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     final String nombreInicial = plato?.nombreItemMenu ?? '';
     final String descripcionInicial = plato?.descripcion ?? '';
     final int? seccionInicial = plato?.idTipoItemMenu;
+    final bool wasVerifiedBefore = _currentRestaurant.estadoVerificado == true;
 
     return showDialog<ItemMenu?>(
       context: this.context,
@@ -2186,6 +2290,10 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                                 Navigator.of(ctx).pop(nuevoPlato);
                               }
                               await _refreshAfterMenuMutation();
+                              await _handleMenuVerificationFlow(
+                                wasVerifiedBefore: wasVerifiedBefore,
+                                actionLabel: isEditing ? 'editado' : 'creado',
+                              );
                             } catch (e) {
                               if (this.mounted) {
                                 ScaffoldMessenger.of(ctx).showSnackBar(
