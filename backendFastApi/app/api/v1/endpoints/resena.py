@@ -1,10 +1,11 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
 from app import crud
+from app.core.roles import ROLE_SUPERADMIN
+from app.db.session import get_db
 from app.schemas.resena import ResenaOut, ResenaCreate, ResenaUpdate, ResenaOutWithUser
 
 router = APIRouter(prefix="/resena", tags=["Resena"])
@@ -69,8 +70,24 @@ def actualizar_resena(id: int, resena_in: ResenaUpdate, db: Session = Depends(ge
 
 
 @router.delete("/{id}", response_model=ResenaOut)
-def eliminar_resena(id: int, db: Session = Depends(get_db)):
-    obj = crud.crud_resena.remove_resena(db, id)
+def eliminar_resena(id: int, request: Request, db: Session = Depends(get_db)):
+    claims = getattr(request.state, "jwt_claims", None)
+    email = (claims or {}).get("email")
+    if not email:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario no autenticado")
+
+    usuario_actual = crud.crud_usuario.get_usuario_por_email(db, email)
+    if not usuario_actual:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario no encontrado")
+
+    obj = crud.crud_resena.get_resena(db, id)
     if not obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resena no encontrada")
-    return obj
+
+    es_propietario = obj.id_usuario == usuario_actual.id_usuario
+    es_superadmin = usuario_actual.id_rol == ROLE_SUPERADMIN
+
+    if not (es_propietario or es_superadmin):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permiso para eliminar esta reseña")
+
+    return crud.crud_resena.remove_resena(db, id)

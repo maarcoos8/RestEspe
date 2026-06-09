@@ -290,19 +290,21 @@ class _EstablishmentGalleryState extends State<EstablishmentGallery> {
 
     if (currentUser == null) return;
 
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Eliminar fotografía'),
         content: const Text('¿Está seguro de que desea eliminar esta fotografía? Esta acción no se puede deshacer.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancelar'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context); // Cerrar diálogo
+              Navigator.pop(dialogContext); // Cerrar diálogo
 
               try {
                 await _photographyService.deletePhotography(
@@ -311,7 +313,7 @@ class _EstablishmentGalleryState extends State<EstablishmentGallery> {
                 );
 
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     const SnackBar(
                       content: Text('Fotografía eliminada exitosamente'),
                       backgroundColor: Color(AppColors.successGreen),
@@ -325,7 +327,7 @@ class _EstablishmentGalleryState extends State<EstablishmentGallery> {
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     SnackBar(
                       content: Text('Error eliminando fotografía: $e'),
                       backgroundColor: const Color(AppColors.errorRed),

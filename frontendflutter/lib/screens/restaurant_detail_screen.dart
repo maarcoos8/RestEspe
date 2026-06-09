@@ -1420,9 +1420,10 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   Widget _buildReviewCard(ReviewModel review) {
     final timeAgo = _getTimeAgoText(review.fechaPublicacion);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final isSuperadmin = RoleConstants.isSuperadmin(
-      authProvider.currentUser?.idRol,
-    );
+    final currentUser = authProvider.currentUser;
+    final canDelete = currentUser != null &&
+        (review.idUsuario == currentUser.idUsuario ||
+            RoleConstants.isSuperadmin(currentUser.idRol));
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1580,7 +1581,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
             ],
           ),
           // Bot+¦n eliminar en esquina inferior derecha
-          if (isSuperadmin)
+          if (canDelete)
             Positioned(
               bottom: 8,
               right: 8,

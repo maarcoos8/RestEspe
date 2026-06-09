@@ -54,10 +54,9 @@ class ReviewService {
       String? imageUrl;
       if (imageFile != null) {
         final imageService = ImageUploadService(baseUrl: baseUrl);
-        imageUrl = await imageService.uploadImage(
+        imageUrl = await imageService.uploadImageUrlOnly(
           imageFile: imageFile,
-          idEstablecimiento: idEstablecimiento,
-          idUsuario: idUsuario,
+          useCase: 'resena',
         );
       }
 
