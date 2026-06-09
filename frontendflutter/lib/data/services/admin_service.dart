@@ -51,20 +51,21 @@ class AdminService {
     }
   }
 
-  /// Busca usuarios por nombre o email, filtrando solo propietarios.
-  static Future<List<AdminUserModel>> searchUsuarios(String query) async {
+  /// Busca usuarios por nombre o email.
+  /// Si se proporciona `roleId`, sólo devuelve usuarios con ese rol.
+  static Future<List<AdminUserModel>> searchUsuarios(String query, {int? roleId}) async {
     if (query.isEmpty) return [];
     try {
       final usuarios = await getUsuarios();
       final lowerQuery = query.toLowerCase();
       return usuarios
-          .where(
-            (u) =>
-                u.idRol == 2 && // rolPropietario = 2
-                ((u.nombreCompleto?.toLowerCase().contains(lowerQuery) ??
-                        false) ||
-                    (u.email.toLowerCase().contains(lowerQuery))),
-          )
+          .where((u) {
+            final matchesQuery = (u.nombreCompleto?.toLowerCase().contains(lowerQuery) ?? false) ||
+                (u.email.toLowerCase().contains(lowerQuery));
+            if (!matchesQuery) return false;
+            if (roleId != null) return u.idRol == roleId;
+            return true;
+          })
           .toList();
     } catch (e) {
       throw Exception('Error al buscar usuarios: $e');

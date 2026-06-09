@@ -5,6 +5,7 @@ import '../core/role_constants.dart';
 import '../data/models/restaurant_detail_model.dart';
 import '../data/services/admin_service.dart';
 import '../data/services/restaurant_detail_service.dart';
+import '../core/auth_token_store.dart';
 import '../providers/auth_provider.dart';
 import '../screens/create_establishment_screen.dart';
 
@@ -197,6 +198,17 @@ class _EstablishmentActionsButtonsState
     });
 
     try {
+      // Comprobar que hay token disponible antes de llamar al servicio
+      if (AuthTokenStore.idToken == null || AuthTokenStore.idToken!.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error: token de autenticación no disponible. Vuelve a iniciar sesión.'),
+            backgroundColor: Color(AppColors.errorRed),
+          ),
+        );
+        return;
+      }
       final restaurantService = RestaurantDetailService();
       final success = await restaurantService.verifyEstablishment(
         widget.restaurant.idEstablecimiento,

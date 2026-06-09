@@ -555,7 +555,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
       const Duration(milliseconds: 500),
       () async {
         try {
-          final usuarios = await AdminService.searchUsuarios(query);
+          final usuarios = await AdminService.searchUsuarios(query, roleId: RoleConstants.rolPropietario);
           if (mounted) {
             setState(() {
               _usuariosFiltrados = usuarios;

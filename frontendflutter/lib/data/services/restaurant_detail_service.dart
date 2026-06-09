@@ -161,6 +161,11 @@ class RestaurantDetailService {
     int? verifierId,
   }) async {
     try {
+      // Chequeo rápido: si no hay token, no tiene sentido llamar al endpoint
+      if (AuthTokenStore.idToken == null || AuthTokenStore.idToken!.isEmpty) {
+        print('setVerificationState: no hay idToken en AuthTokenStore');
+        return false;
+      }
       final response = await http
           .put(
             Uri.parse('$baseUrl/establecimiento/$idEstablecimiento'),
@@ -177,7 +182,7 @@ class RestaurantDetailService {
       if (response.statusCode == 200) {
         return true;
       }
-      print('Error verificando establecimiento: ${response.statusCode}');
+      print('Error verificando establecimiento: ${response.statusCode} ${response.body}');
       return false;
     } catch (e) {
       print('Error en verify: $e');

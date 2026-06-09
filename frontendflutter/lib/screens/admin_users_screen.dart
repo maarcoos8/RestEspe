@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../widgets/user_search_bar.dart';
 import '../core/constants.dart';
 import '../data/models/admin_user_model.dart';
 import '../data/models/rol_model.dart';
@@ -16,15 +17,22 @@ class AdminUsersScreen extends StatefulWidget {
 }
 
 class _AdminUsersScreenState extends State<AdminUsersScreen> {
+  List<AdminUserModel> _allUsers = [];
   List<AdminUserModel> _displayedUsers = [];
   List<RolModel> _roles = [];
   bool _isLoading = true;
   String? _errorMessage;
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -34,14 +42,18 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         _errorMessage = null;
       });
 
+      // Capturar currentUserId antes de operaciones async para evitar usar
+      // BuildContext después de un gap async.
+      final currentUserId = context.read<AuthProvider>().currentUser?.idUsuario;
+
       final usuarios = await AdminService.getUsuarios();
       final roles = await AdminService.getRoles();
 
       // Filter out current user
-      final currentUserId = context.read<AuthProvider>().currentUser?.idUsuario;
       final filtered = usuarios.where((u) => u.idUsuario != currentUserId).toList();
 
       setState(() {
+        _allUsers = filtered;
         _displayedUsers = filtered;
         _roles = roles;
         _isLoading = false;
@@ -52,6 +64,24 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  void _applySearch(String query) {
+    final normalized = query.trim().toLowerCase();
+
+    setState(() {
+      _searchQuery = query;
+      if (normalized.isEmpty) {
+        _displayedUsers = List<AdminUserModel>.from(_allUsers);
+        return;
+      }
+
+      _displayedUsers = _allUsers.where((user) {
+        final name = (user.nombreCompleto ?? '').toLowerCase();
+        final email = user.email.toLowerCase();
+        return name.contains(normalized) || email.contains(normalized);
+      }).toList();
+    });
   }
 
   Future<void> _editRole(AdminUserModel user) async {
@@ -125,12 +155,13 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(AppColors.primaryOrange),
                   ),
-                  onPressed: () async {
+                    onPressed: () async {
                     if (selectedRole != null && selectedRole!.idRol != user.idRol) {
                       try {
-                        await AdminService.updateUsuarioRol(user.idUsuario, selectedRole!.idRol);
-                        Navigator.pop(context);
-                        _loadData();
+                          await AdminService.updateUsuarioRol(user.idUsuario, selectedRole!.idRol);
+                          if (!mounted) return;
+                          Navigator.pop(context);
+                          _loadData();
                       } catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -192,6 +223,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               onPressed: () async {
                 try {
                   await AdminService.deleteUsuario(user.idUsuario);
+                  if (!mounted) return;
                   Navigator.pop(context);
                   _loadData();
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -267,29 +299,58 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     }
 
     if (_displayedUsers.isEmpty) {
-      return Center(
-        child: Text(
-          'No hay usuarios para mostrar',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: const Color(AppColors.lightText),
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+            child: UserSearchBar(
+              hintText: 'Buscar por nombre o email',
+              onQueryChanged: _applySearch,
+            ),
+          ),
+          Expanded(
+            child: Center(
+              child: Text(
+                _searchQuery.trim().isNotEmpty
+                    ? 'No hay resultados para "$_searchQuery"'
+                    : 'No hay usuarios para mostrar',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: const Color(AppColors.lightText),
+                    ),
               ),
-        ),
+            ),
+          ),
+        ],
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: _displayedUsers.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final user = _displayedUsers[index];
-        return _UserCard(
-          user: user,
-          roles: _roles,
-          onEdit: () => _editRole(user),
-          onDelete: () => _deleteUser(user),
-        );
-      },
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+          child: UserSearchBar(
+            hintText: 'Buscar por nombre o email',
+            onQueryChanged: _applySearch,
+          ),
+        ),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: _displayedUsers.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final user = _displayedUsers[index];
+              return _UserCard(
+                user: user,
+                roles: _roles,
+                onEdit: () => _editRole(user),
+                onDelete: () => _deleteUser(user),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

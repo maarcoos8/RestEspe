@@ -22,15 +22,25 @@ class RestaurantDetailProvider extends ChangeNotifier {
   /// Si ya están en caché para el mismo establecimiento, retorna el resultado cacheado.
   /// Si hay una solicitud en curso, retorna ese Future (deduplicación).
   /// De otra forma, hace una nueva solicitud y la cachea.
-  Future<RestaurantDetail?> loadRestaurantDetail(int idEstablecimiento) {
-    // Si ya está en caché, retornar valor cacheado inmediatamente
-    if (_cache.containsKey(idEstablecimiento)) {
+  /// Carga los detalles del restaurante.
+  ///
+  /// Si ya están en caché para el mismo establecimiento, retorna el resultado cacheado.
+  /// Si `forceRefresh` es true, fuerza una llamada al servidor aún si está en caché.
+  Future<RestaurantDetail?> loadRestaurantDetail(int idEstablecimiento, {bool forceRefresh = false}) {
+    // Si está en caché y no se forza refresco, retornar valor cacheado inmediatamente
+    if (!forceRefresh && _cache.containsKey(idEstablecimiento)) {
       return Future.value(_cache[idEstablecimiento]);
     }
 
-    // Si hay una solicitud en curso, retornar ese Future (evita duplicados)
-    if (_pendingRequests.containsKey(idEstablecimiento)) {
+    // Si hay una solicitud en curso y no se forza refresco, retornar ese Future (evita duplicados)
+    if (!forceRefresh && _pendingRequests.containsKey(idEstablecimiento)) {
       return _pendingRequests[idEstablecimiento]!;
+    }
+
+    // Si se forza refresco, limpiar caché y pending para forzar nueva petición
+    if (forceRefresh) {
+      _cache.remove(idEstablecimiento);
+      _pendingRequests.remove(idEstablecimiento);
     }
 
     // Crear nueva solicitud y almacenarla en pendingRequests
@@ -52,6 +62,9 @@ class RestaurantDetailProvider extends ChangeNotifier {
     _pendingRequests[idEstablecimiento] = future;
     return future;
   }
+
+  /// Retorna el detalle cacheado si existe, o null.
+  RestaurantDetail? getCachedDetail(int idEstablecimiento) => _cache[idEstablecimiento];
 
   /// Limpia el caché de restaurante.
   void clearCache() {

@@ -427,8 +427,20 @@ class _AppMapState extends State<AppMap> {
       isScrollControlled: true,
       builder: (context) {
         // El FutureBuilder solo se reevalúa una vez porque el Future es del provider
+        // Determinar si debemos forzar refresco: comparar estado verificado
+        // entre el restaurant listado en el map y la caché del detalle.
+        final visible = _searchProvider?.visibleRestaurants.firstWhere(
+          (r) => r.idEstablecimiento == idEstablecimiento,
+          orElse: () => null as dynamic,
+        );
+
+        final cached = detailProvider.getCachedDetail(idEstablecimiento);
+        final forceRefresh = (visible != null && cached != null)
+            ? (visible.estadoVerificado != cached.estadoVerificado)
+            : false;
+
         return FutureBuilder(
-          future: detailProvider.loadRestaurantDetail(idEstablecimiento),
+          future: detailProvider.loadRestaurantDetail(idEstablecimiento, forceRefresh: forceRefresh),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return Container(

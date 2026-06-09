@@ -17,6 +17,7 @@ import '../data/services/review_service.dart';
 import '../data/services/menu_service.dart';
 import '../providers/restaurant_detail_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/search_provider.dart';
 import '../widgets/establishment_actions_buttons.dart';
 import '../widgets/favorite_button.dart';
 import '../widgets/scaffold_with_nav.dart';
@@ -229,6 +230,10 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
         .read<RestaurantDetailProvider>()
         .clearRestaurantCache(_currentRestaurant.idEstablecimiento);
 
+    // También limpiar la caché de restaurantes visibles en el mapa
+    // para que la vista del mapa vuelva a cargar los datos actualizados.
+    context.read<SearchProvider>().clearVisibleRestaurantsCache();
+
     await _loadMenu();
   }
 
@@ -316,7 +321,15 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     }
 
     await _reloadRestaurantData();
+    // Limpiar la caché del provider de detalle para que otras vistas
+    // (ej. el card del mapa) obtengan la versión actualizada del restaurante.
+    context.read<RestaurantDetailProvider>().clearRestaurantCache(
+      _currentRestaurant.idEstablecimiento,
+    );
     if (!mounted) return;
+
+    // Asegurar que el mapa recargue los datos tras verificar/no verificar
+    context.read<SearchProvider>().clearVisibleRestaurantsCache();
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
