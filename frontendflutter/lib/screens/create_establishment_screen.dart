@@ -50,7 +50,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
   final _direccionController = TextEditingController();
   final _latitudController = TextEditingController();
   final _longitudController = TextEditingController();
-  final _propietarioSearchController = TextEditingController();
+  final _responsableSearchController = TextEditingController();
   late MapController _mapController;
 
   late final bool _isEditMode;
@@ -66,17 +66,17 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
   bool _isLoadingTipos = true;
   bool _isCreating = false;
   bool _isSearchingLocation = false;
-  bool _isSearchingPropietarios = false;
+  bool _isSearchingResponsables = false;
   Timer? _searchDebounceTimer;
-  Timer? _propietarioSearchTimer;
+  Timer? _responsableSearchTimer;
 
   List<TipoEstablecimiento> _tiposDisponibles = [];
   List<LocationSuggestion> _locationSuggestions = [];
   List<AdminUserModel> _usuariosFiltrados = [];
   Set<int> _tiposSeleccionados = {};
-  AdminUserModel? _selectedPropietario;
-  bool _showPropietarioSuggestions = false;
-  bool _isPropietarioEditable = true; // El propietario es editable por defecto
+  AdminUserModel? _selectedResponsable;
+  bool _showResponsableSuggestions = false;
+  bool _isResponsableEditable = true; // El responsable es editable por defecto
 
   LatLng _mapCenter = const LatLng(40.4168, -3.7038); // Madrid por defecto
   String? _errorMessage;
@@ -90,15 +90,15 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
 
     _loadTiposEstablecimiento();
     _direccionController.addListener(_onDireccionChanged);
-    _propietarioSearchController.addListener(_onPropietarioSearchChanged);
+    _responsableSearchController.addListener(_onResponsableSearchChanged);
 
-    // Determinar si el propietario es editable según el rol
+    // Determinar si el responsable es editable según el rol
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _initializeFormAndCheckPermissions();
     });
   }
 
-  /// Inicializa el formulario y verifica permisos para editar propietario
+  /// Inicializa el formulario y verifica permisos para editar responsable
   Future<void> _initializeFormAndCheckPermissions() async {
     final authProvider = context.read<AuthProvider>();
     final user = authProvider.currentUser;
@@ -107,22 +107,22 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
       // Modo edición: cargar datos del establecimiento
       await _loadEstablishmentDataForEditing();
 
-      // El propietario solo es editable para superadmin
-      _isPropietarioEditable = user?.idRol == RoleConstants.rolSuperadmin;
+      // El responsable solo es editable para superadmin
+      _isResponsableEditable = user?.idRol == RoleConstants.rolSuperadmin;
     } else {
-      // Modo creación: si el usuario es propietario, pre-llenar con él
-      if (user != null && user.idRol == RoleConstants.rolPropietario) {
+      // Modo creación: si el usuario es responsable, pre-llenar con él
+      if (user != null && user.idRol == RoleConstants.rolResponsable) {
         setState(() {
-          _selectedPropietario = AdminUserModel(
+          _selectedResponsable = AdminUserModel(
             idUsuario: user.idUsuario,
             email: user.email,
             nombreCompleto: user.nombreCompleto,
             fotoPerfil: user.fotoPerfil,
             idRol: user.idRol,
           );
-          _propietarioSearchController.clear();
-          _formData.propietarioId = user.idUsuario;
-          _showPropietarioSuggestions = false;
+          _responsableSearchController.clear();
+          _formData.responsableId = user.idUsuario;
+          _showResponsableSuggestions = false;
         });
       }
     }
@@ -156,39 +156,39 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
       _formData.tiposEstablecimientoIds = widget.tiposEstablecimientoIds;
     });
 
-    // Cargar propietario con datos reales del backend (async)
-    if (_restaurantToEdit!.propietarioId != null) {
+    // Cargar responsable con datos reales del backend (async)
+    if (_restaurantToEdit!.responsableId != null) {
       try {
         final usuarios = await AdminService.getUsuarios();
-        final propietario = usuarios.firstWhere(
-          (u) => u.idUsuario == _restaurantToEdit!.propietarioId,
+        final responsable = usuarios.firstWhere(
+          (u) => u.idUsuario == _restaurantToEdit!.responsableId,
           orElse: () => AdminUserModel(
-            idUsuario: _restaurantToEdit!.propietarioId!,
+            idUsuario: _restaurantToEdit!.responsableId!,
             email: 'No disponible',
-            nombreCompleto: 'Propietario no encontrado',
+            nombreCompleto: 'Responsable no encontrado',
             fotoPerfil: null,
-            idRol: RoleConstants.rolPropietario,
+            idRol: RoleConstants.rolResponsable,
           ),
         );
         setState(() {
-          _selectedPropietario = propietario;
-          _propietarioSearchController.text =
-              '${propietario.nombreCompleto ?? propietario.email}';
-          _formData.propietarioId = _restaurantToEdit!.propietarioId;
+            _selectedResponsable = responsable;
+            _responsableSearchController.text =
+              '${responsable.nombreCompleto ?? responsable.email}';
+          _formData.responsableId = _restaurantToEdit!.responsableId;
         });
       } catch (e) {
-        print('Error cargando propietario: $e');
+        print('Error cargando responsable: $e');
         // Si hay error, dejar valores ficticios como fallback
         if (mounted) {
           setState(() {
-            _selectedPropietario = AdminUserModel(
-              idUsuario: _restaurantToEdit!.propietarioId!,
+            _selectedResponsable = AdminUserModel(
+              idUsuario: _restaurantToEdit!.responsableId!,
               email: 'No disponible',
-              nombreCompleto: 'Error cargando propietario',
+              nombreCompleto: 'Error cargando responsable',
               fotoPerfil: null,
-              idRol: RoleConstants.rolPropietario,
+              idRol: RoleConstants.rolResponsable,
             );
-            _propietarioSearchController.text = 'Error cargando propietario';
+            _responsableSearchController.text = 'Error cargando responsable';
           });
         }
       }
@@ -198,13 +198,13 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
   @override
   void dispose() {
     _searchDebounceTimer?.cancel();
-    _propietarioSearchTimer?.cancel();
+    _responsableSearchTimer?.cancel();
     _scrollController.dispose();
     _nombreController.dispose();
     _direccionController.dispose();
     _latitudController.dispose();
     _longitudController.dispose();
-    _propietarioSearchController.dispose();
+    _responsableSearchController.dispose();
     _mapController.dispose();
     super.dispose();
   }
@@ -534,52 +534,52 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
     });
   }
 
-  /// Maneja cambios en el campo de búsqueda de propietario con debounce
-  void _onPropietarioSearchChanged() {
-    _propietarioSearchTimer?.cancel();
-    final query = _propietarioSearchController.text.trim();
+  /// Maneja cambios en el campo de búsqueda de responsable con debounce
+  void _onResponsableSearchChanged() {
+    _responsableSearchTimer?.cancel();
+    final query = _responsableSearchController.text.trim();
 
     setState(() {
-      _showPropietarioSuggestions = query.isNotEmpty;
+      _showResponsableSuggestions = query.isNotEmpty;
       if (query.isEmpty) {
         _usuariosFiltrados.clear();
-        _selectedPropietario = null;
+        _selectedResponsable = null;
       }
     });
 
     if (query.isEmpty) return;
 
-    setState(() => _isSearchingPropietarios = true);
+    setState(() => _isSearchingResponsables = true);
 
-    _propietarioSearchTimer = Timer(
+    _responsableSearchTimer = Timer(
       const Duration(milliseconds: 500),
       () async {
         try {
-          final usuarios = await AdminService.searchUsuarios(query, roleId: RoleConstants.rolPropietario);
+          final usuarios = await AdminService.searchUsuarios(query, roleId: RoleConstants.rolResponsable);
           if (mounted) {
             setState(() {
               _usuariosFiltrados = usuarios;
-              _isSearchingPropietarios = false;
+              _isSearchingResponsables = false;
             });
           }
         } catch (e) {
           if (mounted) {
-            setState(() => _isSearchingPropietarios = false);
+            setState(() => _isSearchingResponsables = false);
           }
         }
       },
     );
   }
 
-  /// Selecciona un usuario como propietario
-  void _selectPropietario(AdminUserModel usuario) {
+  /// Selecciona un usuario como responsable
+  void _selectResponsable(AdminUserModel usuario) {
     setState(() {
-      _selectedPropietario = usuario;
-      _propietarioSearchController.text =
+      _selectedResponsable = usuario;
+      _responsableSearchController.text =
           usuario.nombreCompleto ?? usuario.email;
-      _showPropietarioSuggestions = false;
+      _showResponsableSuggestions = false;
       _usuariosFiltrados.clear();
-      _formData.propietarioId = usuario.idUsuario;
+      _formData.responsableId = usuario.idUsuario;
     });
   }
 
@@ -1347,7 +1347,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                         ),
                       const SizedBox(height: 24),
 
-                      // Sección: Propietario
+                      // Sección: Responsable
                       Builder(
                         builder: (context) {
                           final authProvider = context.read<AuthProvider>();
@@ -1356,24 +1356,24 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                           );
                           final isOwner =
                               authProvider.currentUser?.idRol ==
-                              RoleConstants.rolPropietario;
+                              RoleConstants.rolResponsable;
 
-                          // En modo edición, solo superadmin puede editar el propietario
-                          final canEditPropietario =
+                            // En modo edición, solo superadmin puede editar el responsable
+                            final canEditResponsable =
                               !_isEditMode || isSuperadmin;
-                          final isReadOnly = !canEditPropietario || isOwner;
+                            final isReadOnly = !canEditResponsable || isOwner;
 
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Propietario del Establecimiento${isOwner || !canEditPropietario ? '' : ' (Opcional)'}',
+                                'Responsable del establecimiento${isOwner || !canEditResponsable ? '' : ' (Opcional)'}',
                                 style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 8),
                               if (isReadOnly &&
-                                  _selectedPropietario != null &&
+                                  _selectedResponsable != null &&
                                   !_isEditMode)
                                 Container(
                                   width: double.infinity,
@@ -1389,7 +1389,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                     color: const Color(AppColors.white),
                                   ),
                                   child: Text(
-                                    'Tú eres el propietario (No editable)',
+                                    'Tú eres el responsable (No editable)',
                                     style: Theme.of(context).textTheme.bodyLarge
                                         ?.copyWith(
                                           fontWeight: FontWeight.w500,
@@ -1400,7 +1400,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                   ),
                                 )
                               else if (!isReadOnly &&
-                                  _selectedPropietario != null &&
+                                  _selectedResponsable != null &&
                                   isOwner &&
                                   !_isEditMode)
                                 Container(
@@ -1421,7 +1421,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Tú eres el propietario (No editable)',
+                                        'Tú eres el responsable (No editable)',
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodyLarge
@@ -1434,7 +1434,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        _selectedPropietario!.email,
+                                        _selectedResponsable!.email,
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodySmall
@@ -1458,7 +1458,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                             ),
                                           ),
                                           child: const Text(
-                                            'Es el propietario (No editable)',
+                                            'Es el responsable (No editable)',
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: Color(
@@ -1472,11 +1472,11 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                   ),
                                 )
                               else if (!isReadOnly &&
-                                  _selectedPropietario != null &&
+                                  _selectedResponsable != null &&
                                   !isOwner &&
-                                  canEditPropietario &&
+                                  canEditResponsable &&
                                   !_isEditMode)
-                                // Mostrar propietario actual para superadmin que puede editarlo
+                                // Mostrar responsable actual para superadmin que puede editarlo
                                 Column(
                                   children: [
                                     Container(
@@ -1497,7 +1497,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            'Propietario actual:',
+                                            'Responsable actual:',
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .bodySmall
@@ -1509,9 +1509,9 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                           ),
                                           const SizedBox(height: 8),
                                           Text(
-                                            _selectedPropietario!
+                                            _selectedResponsable!
                                                     .nombreCompleto ??
-                                                _selectedPropietario!.email,
+                                              _selectedResponsable!.email,
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .bodyLarge
@@ -1521,7 +1521,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            _selectedPropietario!.email,
+                                            _selectedResponsable!.email,
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .bodySmall
@@ -1536,11 +1536,11 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                     ),
                                     const SizedBox(height: 8),
                                     TextFormField(
-                                      controller: _propietarioSearchController,
-                                      enabled: canEditPropietario && !isOwner,
+                                        controller: _responsableSearchController,
+                                        enabled: canEditResponsable && !isOwner,
                                       decoration: InputDecoration(
                                         hintText:
-                                            'Busca un nuevo propietario para cambiar...',
+                                          'Busca un nuevo responsable para cambiar...',
                                         hintStyle: Theme.of(context)
                                             .textTheme
                                             .bodyMedium
@@ -1559,11 +1559,11 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                   ],
                                 )
                               else if (!isReadOnly &&
-                                  _selectedPropietario != null &&
+                                  _selectedResponsable != null &&
                                   !isOwner &&
-                                  !canEditPropietario &&
+                                  !canEditResponsable &&
                                   !_isEditMode)
-                                // Mostrar propietario sin poder editar (propietario normal viendo su establecimiento)
+                                // Mostrar responsable sin poder editar (responsable normal viendo su establecimiento)
                                 Container(
                                   width: double.infinity,
                                   padding: const EdgeInsets.symmetric(
@@ -1582,8 +1582,8 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        _selectedPropietario!.nombreCompleto ??
-                                            _selectedPropietario!.email,
+                                        _selectedResponsable!.nombreCompleto ??
+                                          _selectedResponsable!.email,
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodyLarge
@@ -1593,7 +1593,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        _selectedPropietario!.email,
+                                        _selectedResponsable!.email,
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodySmall
@@ -1632,10 +1632,10 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                 )
                               else
                                 TextFormField(
-                                  controller: _propietarioSearchController,
-                                  enabled: canEditPropietario && !isOwner,
+                                  controller: _responsableSearchController,
+                                  enabled: canEditResponsable && !isOwner,
                                   decoration: InputDecoration(
-                                    hintText: canEditPropietario
+                                    hintText: canEditResponsable
                                         ? 'Busca por nombre o email...'
                                         : 'No editable',
                                     hintStyle: Theme.of(context)
@@ -1650,24 +1650,24 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                     filled: true,
                                     fillColor: const Color(AppColors.white),
                                     suffixIcon:
-                                        _selectedPropietario != null &&
-                                            canEditPropietario &&
+                                        _selectedResponsable != null &&
+                                            canEditResponsable &&
                                             !isOwner
                                         ? IconButton(
                                             icon: const Icon(Icons.clear),
                                             onPressed: () {
                                               setState(() {
-                                                _selectedPropietario = null;
-                                                _propietarioSearchController
+                                                _selectedResponsable = null;
+                                                _responsableSearchController
                                                     .clear();
-                                                _formData.propietarioId = null;
+                                                _formData.responsableId = null;
                                                 _usuariosFiltrados.clear();
-                                                _showPropietarioSuggestions =
+                                                _showResponsableSuggestions =
                                                     false;
                                               });
                                             },
                                           )
-                                        : (_isSearchingPropietarios
+                                        : (_isSearchingResponsables
                                               ? const SizedBox(
                                                   width: 40,
                                                   child: Padding(
@@ -1684,9 +1684,9 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                   ),
                                 ),
                               // Sugerencias de usuarios
-                              if (_showPropietarioSuggestions &&
+                                if (_showResponsableSuggestions &&
                                   _usuariosFiltrados.isNotEmpty &&
-                                  canEditPropietario &&
+                                  canEditResponsable &&
                                   !isOwner)
                                 Container(
                                   margin: const EdgeInsets.only(top: 8),
@@ -1732,7 +1732,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                                               ),
                                         ),
                                         onTap: () =>
-                                            _selectPropietario(usuario),
+                                            _selectResponsable(usuario),
                                       );
                                     },
                                   ),

@@ -113,6 +113,10 @@ class SearchService {
             verificadorId: int.tryParse(
               entry['verificador_id']?.toString() ?? '',
             ),
+            categoriasDieta: (entry['categorias_dieta'] as List<dynamic>? ?? const [])
+                .whereType<Map<String, dynamic>>()
+                .map(DietCategory.fromJson)
+                .toList(growable: false),
           );
         })
         .whereType<SearchRestaurantResult>()
@@ -169,6 +173,10 @@ class SearchService {
             verificadorId: int.tryParse(
               entry['verificador_id']?.toString() ?? '',
             ),
+            categoriasDieta: (entry['categorias_dieta'] as List<dynamic>? ?? const [])
+                .whereType<Map<String, dynamic>>()
+                .map(DietCategory.fromJson)
+                .toList(growable: false),
           );
         })
         .whereType<SearchRestaurantResult>()

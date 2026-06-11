@@ -55,6 +55,7 @@ class FavoriteService {
             verificadorId: int.tryParse(
               entry['verificador_id']?.toString() ?? '',
             ),
+            categoriasDieta: const [],
           );
         })
         .whereType<SearchRestaurantResult>()

@@ -1,13 +1,16 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from geoalchemy2.elements import WKTElement
 from sqlalchemy import distinct, func
 from sqlalchemy.orm import Session
 
+from app.models.categoria_dieta import CategoriaDieta
 from app.models.establecimiento import Establecimiento
 from app.models.establecimiento_categoria import EstablecimientoCategoria
 from app.models.establecimiento_tipo import EstablecimientoTipo
+from app.models.item_categoria import ItemCategoria
+from app.models.item_menu import ItemMenu
 from app.models.resena import Resena
 from app.schemas.establecimiento import EstablecimientoCreate, EstablecimientoUpdate
 
@@ -33,7 +36,7 @@ def _base_establecimiento_filtrado_query(db: Session):
             Establecimiento.estado_verificado.label("estado_verificado"),
             Establecimiento.ultima_verificacion.label("ultima_verificacion"),
             Establecimiento.verificador_id.label("verificador_id"),
-            Establecimiento.propietario_id.label("propietario_id"),
+            Establecimiento.responsable_id.label("responsable_id"),
             puntuacion_media_subq.c.puntuacion_media.label("puntuacion_media"),
         )
         .outerjoin(
@@ -67,6 +70,94 @@ def get_puntuacion_media_establecimiento(db: Session, id_establecimiento: int) -
     }
 
 
+def _get_categorias_con_conteo_query(db: Session, ids_establecimiento: Optional[List[int]] = None):
+    total_platos_subq = (
+        db.query(
+            ItemMenu.id_establecimiento.label("id_establecimiento"),
+            func.count(ItemMenu.id_item_menu).label("total_platos_menu"),
+        )
+        .group_by(ItemMenu.id_establecimiento)
+        .subquery()
+    )
+
+    platos_categoria_subq = (
+        db.query(
+            ItemMenu.id_establecimiento.label("id_establecimiento"),
+            ItemCategoria.id_categoria.label("id_categoria"),
+            func.count(distinct(ItemMenu.id_item_menu)).label("platos_categoria"),
+        )
+        .join(ItemCategoria, ItemCategoria.id_item_menu == ItemMenu.id_item_menu)
+        .group_by(ItemMenu.id_establecimiento, ItemCategoria.id_categoria)
+        .subquery()
+    )
+
+    query = (
+        db.query(
+            platos_categoria_subq.c.id_establecimiento.label("id_establecimiento"),
+            CategoriaDieta.id_categoria.label("id_categoria"),
+            CategoriaDieta.nombre_dieta.label("nombre_dieta"),
+            CategoriaDieta.color_hex.label("color_hex"),
+            platos_categoria_subq.c.platos_categoria.label("platos_categoria"),
+            func.coalesce(total_platos_subq.c.total_platos_menu, 0).label("total_platos_menu"),
+        )
+        .join(
+            CategoriaDieta,
+            CategoriaDieta.id_categoria == platos_categoria_subq.c.id_categoria,
+        )
+        .outerjoin(
+            total_platos_subq,
+            total_platos_subq.c.id_establecimiento == platos_categoria_subq.c.id_establecimiento,
+        )
+    )
+
+    if ids_establecimiento:
+        query = query.filter(platos_categoria_subq.c.id_establecimiento.in_(ids_establecimiento))
+
+    return query.order_by(
+        platos_categoria_subq.c.id_establecimiento.asc(),
+        CategoriaDieta.nombre_dieta.asc(),
+    )
+
+
+def get_categorias_dieta_con_conteo_por_establecimiento(
+    db: Session, id_establecimiento: int
+) -> List[dict]:
+    rows = _get_categorias_con_conteo_query(db, [id_establecimiento]).all()
+    return [
+        {
+            "id_establecimiento": row.id_establecimiento,
+            "id_categoria": row.id_categoria,
+            "nombre_dieta": row.nombre_dieta,
+            "color_hex": row.color_hex,
+            "platos_categoria": int(row.platos_categoria or 0),
+            "total_platos_menu": int(row.total_platos_menu or 0),
+        }
+        for row in rows
+    ]
+
+
+def get_categorias_dieta_con_conteo_por_establecimientos(
+    db: Session, ids_establecimiento: List[int]
+) -> Dict[int, List[dict]]:
+    if not ids_establecimiento:
+        return {}
+
+    rows = _get_categorias_con_conteo_query(db, ids_establecimiento).all()
+    resultado: Dict[int, List[dict]] = {}
+    for row in rows:
+        resultado.setdefault(row.id_establecimiento, []).append(
+            {
+                "id_establecimiento": row.id_establecimiento,
+                "id_categoria": row.id_categoria,
+                "nombre_dieta": row.nombre_dieta,
+                "color_hex": row.color_hex,
+                "platos_categoria": int(row.platos_categoria or 0),
+                "total_platos_menu": int(row.total_platos_menu or 0),
+            }
+        )
+    return resultado
+
+
 def get_establecimientos_filtrados(
     db: Session,
     latitud: Optional[float] = None,
@@ -75,7 +166,7 @@ def get_establecimientos_filtrados(
     tipos_establecimiento_ids: Optional[List[int]] = None,
     nombre: Optional[str] = None,
     categorias_dieta_ids: Optional[List[int]] = None,
-    propietario_id: Optional[int] = None,
+    responsable_id: Optional[int] = None,
     solo_verificados: Optional[bool] = None,
     puntuacion_media_minima: Optional[float] = None,
     skip: int = 0,
@@ -86,8 +177,8 @@ def get_establecimientos_filtrados(
     if nombre:
         query = query.filter(Establecimiento.nombre.ilike(f"%{nombre}%"))
 
-    if propietario_id is not None:
-        query = query.filter(Establecimiento.propietario_id == propietario_id)
+    if responsable_id is not None:
+        query = query.filter(Establecimiento.responsable_id == responsable_id)
 
     if solo_verificados:
         query = query.filter(Establecimiento.estado_verificado.is_(True))
@@ -121,6 +212,9 @@ def get_establecimientos_filtrados(
         query = query.filter(Establecimiento.id_establecimiento.in_(subquery_categorias))
 
     rows = query.order_by(Establecimiento.id_establecimiento.asc()).offset(skip).limit(limit).all()
+    categorias_por_establecimiento = get_categorias_dieta_con_conteo_por_establecimientos(
+        db, [row.id_establecimiento for row in rows]
+    )
     result = []
     for row in rows:
         result.append(
@@ -134,8 +228,9 @@ def get_establecimientos_filtrados(
                 "estado_verificado": row.estado_verificado,
                 "ultima_verificacion": row.ultima_verificacion,
                 "verificador_id": row.verificador_id,
-                "propietario_id": row.propietario_id,
+                "responsable_id": row.responsable_id,
                 "puntuacion_media": float(row.puntuacion_media) if row.puntuacion_media is not None else None,
+                "categorias_dieta": categorias_por_establecimiento.get(row.id_establecimiento, []),
             }
         )
     return result
@@ -147,9 +242,13 @@ def create_establecimiento(
     data = establecimiento_in.model_dump(exclude_unset=True)
     lat = data.pop("latitud", None)
     lon = data.pop("longitud", None)
+    responsable_id = data.pop("responsable_id", None)
     if lat is not None and lon is not None:
         # Use WKTElement to create a geometry value with SRID so SQLAlchemy stores it properly
         data["coordenadas"] = WKTElement(f"POINT({lon} {lat})", srid=4326)
+
+    if responsable_id is not None:
+        data["responsable_id"] = responsable_id
 
     # Allow verificador_id to come either from the optional arg or from the request body
     body_verificador = data.get("verificador_id")
@@ -178,8 +277,12 @@ def update_establecimiento(
     data = establecimiento_in.model_dump(exclude_unset=True)
     lat = data.pop("latitud", None)
     lon = data.pop("longitud", None)
+    responsable_id = data.pop("responsable_id", None)
     if lat is not None and lon is not None:
         db_obj.coordenadas = WKTElement(f"POINT({lon} {lat})", srid=4326)
+
+    if responsable_id is not None:
+        data["responsable_id"] = responsable_id
 
     for field, value in data.items():
         setattr(db_obj, field, value)

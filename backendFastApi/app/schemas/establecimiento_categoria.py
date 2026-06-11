@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class EstablecimientoCategoriaCreate(BaseModel):
@@ -11,5 +11,16 @@ class EstablecimientoCategoriaOut(BaseModel):
     id_categoria: int
     nombre_dieta: str
     color_hex: str = '#FF6B6B'
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CategoriaDietaConteoOut(BaseModel):
+    id_establecimiento: int
+    id_categoria: int
+    nombre_dieta: str
+    color_hex: str = '#FF6B6B'
+    platos_categoria: int = 0
+    total_platos_menu: int = 0
 
     model_config = ConfigDict(from_attributes=True)

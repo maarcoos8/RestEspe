@@ -15,7 +15,7 @@ class RestaurantDetail {
     required this.puntuacionMedia,
     required this.numeroResenas,
     this.imagenUrl,
-    this.propietarioId,
+    this.responsableId,
   });
 
   final int idEstablecimiento;
@@ -30,7 +30,7 @@ class RestaurantDetail {
   final double? puntuacionMedia;
   final int numeroResenas;
   final String? imagenUrl;
-  final int? propietarioId;
+  final int? responsableId;
 }
 
 /// Categoría de dieta de un restaurante.
@@ -39,16 +39,33 @@ class DietaCategory {
     required this.idCategoria,
     required this.nombreDieta,
     required this.colorHex,
+    this.cantidadPlatos,
+    this.totalPlatos,
   });
 
   final int idCategoria;
   final String nombreDieta;
   final String colorHex;
+  final int? cantidadPlatos;
+  final int? totalPlatos;
+
+  String get etiquetaConConteo {
+    if (cantidadPlatos != null && totalPlatos != null) {
+      return '$nombreDieta $cantidadPlatos/$totalPlatos';
+    }
+    return nombreDieta;
+  }
 
   factory DietaCategory.fromJson(Map<String, dynamic> json) {
+    final cantidadPlatos = (json['cantidad_platos'] as num?)?.toInt();
+    final totalPlatos = (json['total_platos'] as num?)?.toInt();
+    final nombreDieta = json['nombre_dieta'] as String;
+
     return DietaCategory(
       idCategoria: json['id_categoria'] as int,
-      nombreDieta: json['nombre_dieta'] as String,
+      nombreDieta: nombreDieta,
+      cantidadPlatos: cantidadPlatos,
+      totalPlatos: totalPlatos,
       colorHex: json['color_hex'] as String? ?? '#FF6B6B',
     );
   }

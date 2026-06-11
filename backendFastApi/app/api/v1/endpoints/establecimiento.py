@@ -26,7 +26,7 @@ def filtrar_establecimientos(
     tipo_establecimiento_ids: Optional[List[int]] = Query(default=None),
     nombre: Optional[str] = Query(default=None),
     categoria_dieta_ids: Optional[List[int]] = Query(default=None),
-    propietario_id: Optional[int] = Query(default=None),
+    responsable_id: Optional[int] = Query(default=None),
     solo_verificados: Optional[bool] = Query(default=None),
     puntuacion_media_minima: Optional[float] = Query(default=None, ge=0, le=5),
     skip: int = Query(default=0, ge=0),
@@ -41,7 +41,7 @@ def filtrar_establecimientos(
         tipos_establecimiento_ids=tipo_establecimiento_ids,
         nombre=nombre,
         categorias_dieta_ids=categoria_dieta_ids,
-        propietario_id=propietario_id,
+        responsable_id=responsable_id,
         solo_verificados=solo_verificados,
         puntuacion_media_minima=puntuacion_media_minima,
         skip=skip,
@@ -64,7 +64,7 @@ def leer_establecimientos(skip: int = 0, limit: int = 100, db: Session = Depends
             Establecimiento.estado_verificado,
             Establecimiento.ultima_verificacion,
             Establecimiento.verificador_id,
-            Establecimiento.propietario_id,
+            Establecimiento.responsable_id.label("responsable_id"),
         )
         .offset(skip)
         .limit(limit)
@@ -83,7 +83,7 @@ def leer_establecimientos(skip: int = 0, limit: int = 100, db: Session = Depends
                 "estado_verificado": r.estado_verificado,
                 "ultima_verificacion": r.ultima_verificacion,
                 "verificador_id": r.verificador_id,
-                "propietario_id": r.propietario_id,
+                "responsable_id": r.responsable_id,
             }
         )
     return result
@@ -101,7 +101,7 @@ def leer_establecimiento(id: int, db: Session = Depends(get_db)):
         Establecimiento.estado_verificado,
         Establecimiento.ultima_verificacion,
         Establecimiento.verificador_id,
-        Establecimiento.propietario_id,
+        Establecimiento.responsable_id.label("responsable_id"),
     ).where(Establecimiento.id_establecimiento == id)
 
     row = db.execute(stmt).first()
@@ -117,7 +117,7 @@ def leer_establecimiento(id: int, db: Session = Depends(get_db)):
         "estado_verificado": row.estado_verificado,
         "ultima_verificacion": row.ultima_verificacion,
         "verificador_id": row.verificador_id,
-        "propietario_id": row.propietario_id,
+        "responsable_id": row.responsable_id,
     }
 
 
@@ -175,7 +175,7 @@ def eliminar_establecimiento(id: int, db: Session = Depends(get_db)):
     - El establecimiento en sí
     
     NOTA: En un entorno de producción, se debe validar que el usuario tenga
-    permisos para eliminar (superadmin o propietario del establecimiento).
+    permisos para eliminar (superadmin o responsable del establecimiento).
     """
     obj = crud.crud_establecimiento.remove_establecimiento(db, id)
     if not obj:

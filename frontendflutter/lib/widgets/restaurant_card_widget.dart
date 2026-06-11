@@ -182,7 +182,7 @@ class _RestaurantCardWidgetState extends State<RestaurantCardWidget> {
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Text(
-                                    cat.nombreDieta,
+                                        cat.etiquetaConConteo,
                                     style: Theme.of(context)
                                         .textTheme
                                         .labelSmall

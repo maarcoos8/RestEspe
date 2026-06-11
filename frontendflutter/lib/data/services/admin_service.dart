@@ -171,7 +171,7 @@ class AdminService {
     int skip = 0,
     int limit = 10,
     String? nombre,
-    int? propietarioId,
+    int? responsableId,
     List<int>? categoriaDietaIds,
     List<int>? tipoEstablecimientoIds,
     bool? soloVerificados,
@@ -185,8 +185,8 @@ class AdminService {
       if (nombre != null && nombre.trim().isNotEmpty) {
         queryParametersAll['nombre'] = [nombre.trim()];
       }
-      if (propietarioId != null) {
-        queryParametersAll['propietario_id'] = [propietarioId.toString()];
+      if (responsableId != null) {
+        queryParametersAll['responsable_id'] = [responsableId.toString()];
       }
       if (categoriaDietaIds != null && categoriaDietaIds.isNotEmpty) {
         queryParametersAll['categoria_dieta_ids'] = categoriaDietaIds

@@ -13,7 +13,7 @@ class EstablecimientoBase(BaseModel):
 	estado_verificado: Optional[bool] = False
 	ultima_verificacion: Optional[datetime] = None
 	verificador_id: Optional[int] = None
-	propietario_id: Optional[int] = None
+	responsable_id: Optional[int] = None
 
 
 class EstablecimientoCreate(EstablecimientoBase):
@@ -29,7 +29,7 @@ class EstablecimientoUpdate(BaseModel):
 	estado_verificado: Optional[bool] = None
 	ultima_verificacion: Optional[datetime] = None
 	verificador_id: Optional[int] = None
-	propietario_id: Optional[int] = None
+	responsable_id: Optional[int] = None
 	tipos_establecimiento_ids: Optional[List[int]] = None
 
 

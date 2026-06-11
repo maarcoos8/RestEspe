@@ -1,7 +1,7 @@
 """Make id_tipo_item_menu nullable in item_menu
 
 Revision ID: 003_nullable_tipo_item
-Revises: 002_add_propietario_id_to_establecimiento
+Revises: 002_add_responsable_id_to_establecimiento
 Create Date: 2026-05-16 14:30:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '003_nullable_tipo_item'
-down_revision = '002_add_propietario_id'
+down_revision = '002_add_responsable_id_to_establecimiento'
 branch_labels = None
 depends_on = None
 

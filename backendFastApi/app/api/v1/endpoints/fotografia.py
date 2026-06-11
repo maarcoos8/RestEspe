@@ -99,15 +99,15 @@ def eliminar_fotografia(id: int, id_usuario: int = Query(...), db: Session = Dep
     if not obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fotografia no encontrada")
     
-    # Validar permisos: debe ser el propietario o superadmin
+    # Validar permisos: debe ser el autor o superadmin
     usuario_actual = db.query(Usuario).filter(Usuario.id_usuario == id_usuario).first()
     if not usuario_actual:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario no encontrado")
     
-    es_propietario = obj.id_usuario == id_usuario
+    es_autor = obj.id_usuario == id_usuario
     es_superadmin = usuario_actual.id_rol == ROLE_SUPERADMIN
     
-    if not (es_propietario or es_superadmin):
+    if not (es_autor or es_superadmin):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permiso para eliminar esta fotografía")
     
     return crud.crud_fotografia.remove_fotografia(db, id)

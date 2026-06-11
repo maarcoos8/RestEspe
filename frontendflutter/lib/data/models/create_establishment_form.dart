@@ -6,7 +6,7 @@ class CreateEstablishmentForm {
   double? latitud;
   double? longitud;
   List<int> tiposEstablecimientoIds;
-  int? propietarioId;
+  int? responsableId;
 
   CreateEstablishmentForm({
     required this.nombre,
@@ -15,7 +15,7 @@ class CreateEstablishmentForm {
     this.latitud,
     this.longitud,
     this.tiposEstablecimientoIds = const [],
-    this.propietarioId,
+    this.responsableId,
   });
 
   /// Convierte a JSON para enviar al backend.
@@ -29,8 +29,8 @@ class CreateEstablishmentForm {
       'longitud': longitud,
       'estado_verificado': false,
     };
-    if (propietarioId != null) {
-      json['propietario_id'] = propietarioId;
+    if (responsableId != null) {
+      json['responsable_id'] = responsableId;
     }
     return json;
   }

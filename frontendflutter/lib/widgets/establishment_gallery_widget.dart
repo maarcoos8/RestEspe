@@ -214,7 +214,7 @@ class _EstablishmentGalleryState extends State<EstablishmentGallery> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final currentUser = authProvider.currentUser;
     
-    // Verificar si el usuario puede eliminar (es propietario o superadmin)
+    // Verificar si el usuario puede eliminar (es responsable o superadmin)
     final canDelete = currentUser != null && 
         (currentUser.idUsuario == photo.idUsuario || 
          currentUser.idRol == AppConstants.roleSuperAdmin);

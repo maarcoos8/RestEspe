@@ -623,7 +623,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       child: Text(
-                                        cat.nombreDieta,
+                                        cat.etiquetaConConteo,
                                         style: Theme.of(context)
                                             .textTheme
                                             .labelSmall
@@ -649,7 +649,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    'Verificado por ${_currentRestaurant.verificadorId == _currentRestaurant.propietarioId ? 'el propietario' : 'un administrador global'} ${_getVerificationTimeText(_currentRestaurant.ultimaVerificacion!)}',
+                                    'Verificado por ${_currentRestaurant.verificadorId == _currentRestaurant.responsableId ? 'el responsable del establecimiento' : 'un administrador global'} ${_getVerificationTimeText(_currentRestaurant.ultimaVerificacion!)}',
                                     style: Theme.of(context).textTheme.bodySmall
                                         ?.copyWith(
                                           color: const Color(
@@ -836,7 +836,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   Widget _buildMenuSection() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final currentUser = authProvider.currentUser;
-    final isOwner = currentUser?.idUsuario == _currentRestaurant.propietarioId;
+    final isOwner = currentUser?.idUsuario == _currentRestaurant.responsableId;
     final isAdmin = RoleConstants.isAdmin(currentUser?.idRol);
     final canCreateMenuItems = isOwner || isAdmin;
 
@@ -867,7 +867,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Botones de crear secci+¦n y crear plato (solo para propietario/admin/superadmin)
+          // Botones de crear sección y crear plato (solo para responsable/admin/superadmin)
           if (canCreateMenuItems)
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
@@ -979,7 +979,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     final currentUser = authProvider.currentUser;
     final canManage = currentUser != null &&
         (RoleConstants.isAdmin(currentUser.idRol) ||
-            currentUser.idUsuario == _currentRestaurant.propietarioId);
+            currentUser.idUsuario == _currentRestaurant.responsableId);
 
     return Container(
       decoration: BoxDecoration(
@@ -1232,7 +1232,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     final currentUser = authProvider.currentUser;
     final canManage = currentUser != null &&
         (RoleConstants.isAdmin(currentUser.idRol) ||
-            currentUser.idUsuario == _currentRestaurant.propietarioId);
+            currentUser.idUsuario == _currentRestaurant.responsableId);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Container(
@@ -1302,7 +1302,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Text(
-                          categoria.nombreDieta,
+                          categoria.etiquetaConConteo,
                           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                 color: _hexToColor(categoria.colorHex),
                                 fontWeight: FontWeight.w600,
@@ -1435,14 +1435,14 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   Widget _buildReviewsSection() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final currentUser = authProvider.currentUser;
-    final isOwner = currentUser?.idUsuario == _currentRestaurant.propietarioId;
+    final isOwner = currentUser?.idUsuario == _currentRestaurant.responsableId;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-        // Botón "Crear nueva reseña" solo si no es propietario
+        // Botón "Crear nueva reseña" solo si no es responsable
         if (!isOwner)
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
@@ -1482,7 +1482,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                             puntuacionMedia: newAvg,
                             numeroResenas: newCount,
                             imagenUrl: _currentRestaurant.imagenUrl,
-                            propietarioId: _currentRestaurant.propietarioId,
+                            responsableId: _currentRestaurant.responsableId,
                           );
                         });
                       },
@@ -1779,7 +1779,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
             puntuacionMedia: null,
             numeroResenas: 0,
             imagenUrl: _currentRestaurant.imagenUrl,
-            propietarioId: _currentRestaurant.propietarioId,
+            responsableId: _currentRestaurant.responsableId,
           );
         } else {
           final oldAvg = _currentRestaurant.puntuacionMedia ?? 0.0;
@@ -1798,7 +1798,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
             puntuacionMedia: newAvg,
             numeroResenas: newCount,
             imagenUrl: _currentRestaurant.imagenUrl,
-            propietarioId: _currentRestaurant.propietarioId,
+            responsableId: _currentRestaurant.responsableId,
           );
         }
       });
@@ -2188,7 +2188,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                                 (categoria) => FilterChip(
                                   selected: categoriasSeleccionadas
                                       .contains(categoria.idCategoria),
-                                  label: Text(categoria.nombreDieta),
+                                  label: Text(categoria.etiquetaConConteo),
                                   showCheckmark: false,
                                   selectedColor: _hexToColor(categoria.colorHex)
                                       .withValues(alpha: 0.18),

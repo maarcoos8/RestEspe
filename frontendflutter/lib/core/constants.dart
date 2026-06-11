@@ -32,7 +32,7 @@ class AppConstants {
 
   // Roles
   static const int roleUsuario = 1;
-  static const int rolePropietario = 2;
+  static const int roleResponsable = 2;
   static const int roleAdministradorGlobal = 3;
   static const int roleSuperAdmin = 4;
 }

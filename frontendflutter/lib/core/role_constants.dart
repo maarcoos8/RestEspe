@@ -2,7 +2,7 @@
 abstract class RoleConstants {
   // Role IDs
   static const int rolUsuario = 1;
-  static const int rolPropietario = 2;
+  static const int rolResponsable = 2;
   static const int rolAdministradorGlobal = 3;
   static const int rolSuperadmin = 4;
 
@@ -12,7 +12,7 @@ abstract class RoleConstants {
   // Role names for display
   static const Map<int, String> roleNames = {
     rolUsuario: 'Usuario',
-    rolPropietario: 'Propietario',
+    rolResponsable: 'Responsable',
     rolAdministradorGlobal: 'Administrador Global',
     rolSuperadmin: 'Superadmin',
   };
@@ -37,9 +37,9 @@ abstract class RoleConstants {
     return userRoleId == rolSuperadmin;
   }
 
-  /// Check if user can manage establishments (propietario or admin)
+  /// Check if user can manage establishments (responsable o admin)
   static bool canManageEstablishments(int? userRoleId) {
-    return userRoleId == rolPropietario ||
+    return userRoleId == rolResponsable ||
         userRoleId == rolAdministradorGlobal ||
         userRoleId == rolSuperadmin;
   }

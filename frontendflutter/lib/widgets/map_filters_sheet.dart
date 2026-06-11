@@ -21,6 +21,7 @@ class _MapFiltersSheetState extends State<MapFiltersSheet> {
   late bool _onlyVerified;
   double? _minimumRating;
   late Future<_MapFiltersOptions> _optionsFuture;
+  bool _dietsExpanded = false;
   bool _typesExpanded = false;
 
   @override
@@ -89,6 +90,7 @@ class _MapFiltersSheetState extends State<MapFiltersSheet> {
       _selectedTypeIds.clear();
       _onlyVerified = false;
       _minimumRating = null;
+      _dietsExpanded = false;
       _typesExpanded = false;
     });
   }
@@ -201,52 +203,129 @@ class _MapFiltersSheetState extends State<MapFiltersSheet> {
                                       ),
                                 )
                               else
-                                Wrap(
-                                  spacing: 10,
-                                  runSpacing: 10,
-                                  children: options.dietas
-                                      .map((dieta) {
-                                        final isSelected = _selectedDietIds
-                                            .contains(dieta.idCategoria);
-                                        return FilterChip(
-                                          selected: isSelected,
-                                          label: Text(dieta.nombreDieta),
-                                          showCheckmark: false,
-                                          onSelected: (_) =>
-                                              _toggleDiet(dieta.idCategoria),
-                                          selectedColor: _hexToColor(
-                                            dieta.colorHex,
-                                          ).withValues(alpha: 0.18),
-                                          backgroundColor: const Color(
-                                            AppColors.white,
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: const Color(AppColors.white),
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(
+                                      color: const Color(AppColors.accentBeige),
+                                    ),
+                                  ),
+                                  child: ExpansionTile(
+                                    initiallyExpanded: _dietsExpanded,
+                                    shape: const RoundedRectangleBorder(
+                                      side: BorderSide.none,
+                                    ),
+                                    collapsedShape: const RoundedRectangleBorder(
+                                      side: BorderSide.none,
+                                    ),
+                                    onExpansionChanged: (value) {
+                                      setState(() {
+                                        _dietsExpanded = value;
+                                      });
+                                    },
+                                    tilePadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    childrenPadding: const EdgeInsets.fromLTRB(
+                                      16,
+                                      0,
+                                      16,
+                                      16,
+                                    ),
+                                    title: Text(
+                                      _selectedDietIds.isEmpty
+                                          ? 'Seleccionar dietas'
+                                          : '${_selectedDietIds.length} dieta(s) seleccionadas',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall
+                                          ?.copyWith(fontWeight: FontWeight.w700),
+                                    ),
+                                    subtitle: Text(
+                                      _selectedDietIds.isEmpty
+                                          ? 'Sin filtros aplicados'
+                                          : 'Toca para ver o cambiar la selección',
+                                      style: Theme.of(context).textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: const Color(
+                                              AppColors.lightText,
+                                            ),
                                           ),
-                                          side: BorderSide(
-                                            color: isSelected
-                                                ? _hexToColor(dieta.colorHex)
-                                                : const Color(0x1F000000),
-                                          ),
-                                          labelStyle: Theme.of(context)
-                                              .textTheme
-                                              .labelSmall
-                                              ?.copyWith(
-                                                color: isSelected
-                                                    ? _hexToColor(
-                                                        dieta.colorHex,
-                                                      )
-                                                    : const Color(
-                                                        AppColors.darkText,
+                                    ),
+                                    children: [
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          maxHeight: 260,
+                                        ),
+                                        child: Scrollbar(
+                                          child: ListView.builder(
+                                            shrinkWrap: true,
+                                            itemCount: options.dietas.length,
+                                            itemBuilder: (context, index) {
+                                              final dieta = options.dietas[index];
+                                              final isSelected = _selectedDietIds
+                                                  .contains(dieta.idCategoria);
+                                              final color = _hexToColor(
+                                                dieta.colorHex,
+                                              );
+                                              return CheckboxListTile(
+                                                contentPadding: EdgeInsets.zero,
+                                                controlAffinity:
+                                                    ListTileControlAffinity
+                                                        .leading,
+                                                dense: true,
+                                                title: Text(
+                                                  dieta.nombreDieta,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodyMedium
+                                                      ?.copyWith(
+                                                        color: isSelected
+                                                            ? color
+                                                            : const Color(
+                                                                AppColors.darkText,
+                                                              ),
+                                                        fontWeight:
+                                                            FontWeight.w600,
                                                       ),
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                        );
-                                      })
-                                      .toList(growable: false),
+                                                ),
+                                                value: isSelected,
+                                                onChanged: (_) => _toggleDiet(
+                                                  dieta.idCategoria,
+                                                ),
+                                                fillColor:
+                                                    WidgetStateProperty.resolveWith(
+                                                      (states) {
+                                                        if (states.contains(
+                                                          WidgetState.selected,
+                                                        )) {
+                                                          return color;
+                                                        }
+                                                        return null;
+                                                      },
+                                                    ),
+                                                side: BorderSide(
+                                                  color: isSelected
+                                                      ? color
+                                                      : const Color(0x1F000000),
+                                                ),
+                                                checkColor:
+                                                    const Color(AppColors.white),
+                                                activeColor: color,
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               const SizedBox(height: 24),
                               _buildSectionTitle(
                                 context,
                                 'Tipos de restaurantes',
-                                'Se muestra como un desplegable porque puede haber muchos tipos.',
+                                'Selecciona uno o varios tipos de establecimientos. Si no seleccionas ninguno, se mostrarán todos.',
                               ),
                               const SizedBox(height: 10),
                               Container(

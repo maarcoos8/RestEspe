@@ -12,10 +12,10 @@ import '../widgets/scaffold_with_nav.dart';
 import 'create_establishment_screen.dart';
 import 'restaurant_detail_screen.dart';
 
-/// Pantalla de administración de establecimientos (superadmin o propietario).
+/// Pantalla de administración de establecimientos (superadmin o responsable).
 ///
 /// Muestra listado paginado de 10 en 10 con filtro por nombre.
-/// Si se pasa [propietarioId], solo mostrará establecimientos del propietario.
+/// Si se pasa [responsableId], solo mostrará establecimientos del responsable.
 class AdminEstablishmentsScreen extends StatefulWidget {
   /// If true, the screen will render its content without wrapping it in
   /// `ScaffoldWithNav`. This allows embedding the admin list inside
@@ -23,11 +23,11 @@ class AdminEstablishmentsScreen extends StatefulWidget {
   const AdminEstablishmentsScreen({
     super.key,
     this.embedInHome = false,
-    this.propietarioId,
+    this.responsableId,
   });
 
   final bool embedInHome;
-  final int? propietarioId;
+  final int? responsableId;
 
   @override
   State<AdminEstablishmentsScreen> createState() =>
@@ -106,7 +106,7 @@ class _AdminEstablishmentsScreenState extends State<AdminEstablishmentsScreen> {
         skip: 0,
         limit: _pageSize,
         nombre: _appliedFilter,
-        propietarioId: widget.propietarioId,
+        responsableId: widget.responsableId,
       );
       final details = await _loadRestaurantDetails(items);
       if (!mounted) return;
@@ -137,7 +137,7 @@ class _AdminEstablishmentsScreenState extends State<AdminEstablishmentsScreen> {
         skip: _skip,
         limit: _pageSize,
         nombre: _appliedFilter,
-        propietarioId: widget.propietarioId,
+        responsableId: widget.responsableId,
       );
       final details = await _loadRestaurantDetails(items);
       if (!mounted) return;

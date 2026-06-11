@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from app.api.v1.endpoints import (
 	establecimiento,
 	establecimiento_categoria as establecimiento_categoria_endpoint,
+	establecimiento_categoria_conteo as establecimiento_categoria_conteo_endpoint,
 	establecimiento_tipo as establecimiento_tipo_endpoint,
 	usuario_establecimiento_favorito as usuario_establecimiento_favorito_endpoint,
 	item_categoria as item_categoria_endpoint,
@@ -74,6 +75,8 @@ app.include_router(resena_endpoint.router, prefix="/api/v1")
 app.include_router(categoria_dieta_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de relacion Establecimiento-Categoria
 app.include_router(establecimiento_categoria_endpoint.router, prefix="/api/v1")
+# Registrar el endpoint de categorías de dieta con conteo de platos
+app.include_router(establecimiento_categoria_conteo_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de relacion Establecimiento-Tipo
 app.include_router(establecimiento_tipo_endpoint.router, prefix="/api/v1")
 # Registrar el endpoint de favoritos de usuario

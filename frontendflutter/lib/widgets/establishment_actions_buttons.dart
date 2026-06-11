@@ -268,7 +268,7 @@ class _EstablishmentActionsButtonsState
           currentUser?.idRol,
         );
         final isOwner =
-            currentUser?.idUsuario == widget.restaurant.propietarioId;
+            currentUser?.idUsuario == widget.restaurant.responsableId;
         final canDelete =
             (canManage && isOwner) || RoleConstants.isAdmin(currentUser?.idRol);
 

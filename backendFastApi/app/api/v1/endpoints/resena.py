@@ -84,10 +84,10 @@ def eliminar_resena(id: int, request: Request, db: Session = Depends(get_db)):
     if not obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resena no encontrada")
 
-    es_propietario = obj.id_usuario == usuario_actual.id_usuario
+    es_autor = obj.id_usuario == usuario_actual.id_usuario
     es_superadmin = usuario_actual.id_rol == ROLE_SUPERADMIN
 
-    if not (es_propietario or es_superadmin):
+    if not (es_autor or es_superadmin):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permiso para eliminar esta reseña")
 
     return crud.crud_resena.remove_resena(db, id)

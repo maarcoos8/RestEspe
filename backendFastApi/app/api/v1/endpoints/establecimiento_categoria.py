@@ -8,6 +8,7 @@ from app.db.session import get_db
 from app.schemas.establecimiento_categoria import (
     EstablecimientoCategoriaCreate,
     EstablecimientoCategoriaOut,
+    CategoriaDietaConteoOut,
 )
 
 router = APIRouter(prefix="/establecimiento_categoria", tags=["EstablecimientoCategoria"])
@@ -18,9 +19,11 @@ def leer_relaciones(db: Session = Depends(get_db)):
     return crud.crud_establecimiento_categoria.get_establecimiento_categorias(db)
 
 
-@router.get("/establecimiento/{id_establecimiento}", response_model=List[EstablecimientoCategoriaOut])
+@router.get("/establecimiento/{id_establecimiento}", response_model=List[CategoriaDietaConteoOut])
 def leer_categorias_por_establecimiento(id_establecimiento: int, db: Session = Depends(get_db)):
-    return crud.crud_establecimiento_categoria.get_categorias_por_establecimiento(db, id_establecimiento)
+    return crud.crud_establecimiento.get_categorias_dieta_con_conteo_por_establecimiento(
+        db, id_establecimiento
+    )
 
 
 @router.get("/categoria/{id_categoria}", response_model=List[EstablecimientoCategoriaOut])

@@ -1,7 +1,8 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+from app.schemas.establecimiento_categoria import CategoriaDietaConteoOut
 
 
 class EstablecimientoFiltroOut(BaseModel):
@@ -14,8 +15,9 @@ class EstablecimientoFiltroOut(BaseModel):
     estado_verificado: Optional[bool] = False
     ultima_verificacion: Optional[datetime] = None
     verificador_id: Optional[int] = None
-    propietario_id: Optional[int] = None
+    responsable_id: Optional[int] = None
     puntuacion_media: Optional[float] = None
+    categorias_dieta: List[CategoriaDietaConteoOut] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 

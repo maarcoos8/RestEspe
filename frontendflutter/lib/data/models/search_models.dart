@@ -20,6 +20,7 @@ class SearchRestaurantResult {
     required this.estadoVerificado,
     required this.ultimaVerificacion,
     required this.verificadorId,
+    required this.categoriasDieta,
   });
 
   final int idEstablecimiento;
@@ -30,6 +31,7 @@ class SearchRestaurantResult {
   final bool? estadoVerificado;
   final DateTime? ultimaVerificacion;
   final int? verificadorId;
+  final List<DietCategory> categoriasDieta;
 
   LatLng? get coordinates {
     if (latitud == null || longitud == null) {
@@ -74,10 +76,36 @@ class RestaurantMapFilters {
 }
 
 class DietCategory {
-  const DietCategory({required this.idCategoria, required this.nombreDieta});
+  const DietCategory({
+    required this.idCategoria,
+    required this.nombreDieta,
+    required this.colorHex,
+    required this.platosCategoria,
+    required this.totalPlatosMenu,
+  });
 
   final int idCategoria;
   final String nombreDieta;
+  final String colorHex;
+  final int platosCategoria;
+  final int totalPlatosMenu;
+
+  String get etiquetaConConteo {
+    if (totalPlatosMenu <= 0) {
+      return nombreDieta;
+    }
+    return '$nombreDieta $platosCategoria/$totalPlatosMenu';
+  }
+
+  factory DietCategory.fromJson(Map<String, dynamic> json) {
+    return DietCategory(
+      idCategoria: json['id_categoria'] as int,
+      nombreDieta: json['nombre_dieta'] as String,
+      colorHex: json['color_hex'] as String? ?? '#FF6B6B',
+      platosCategoria: (json['platos_categoria'] as num?)?.toInt() ?? 0,
+      totalPlatosMenu: (json['total_platos_menu'] as num?)?.toInt() ?? 0,
+    );
+  }
 }
 
 class MapFocusRequest {

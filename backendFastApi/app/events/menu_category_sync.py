@@ -3,7 +3,7 @@ Listeners para sincronizar `establecimiento_categoria` basados en los ítems del
 
 Regla:
  - Un establecimiento tiene asociada una CategoriaDieta (en establecimiento_categoria)
-   iff tiene >= 4 ItemMenu asociados a esa categoria (vía item_categoria).
+     iff tiene al menos 1 ItemMenu asociado a esa categoria (vía item_categoria).
 
 Listeners registrados:
  - ItemCategoria: after_insert, after_delete, after_update
@@ -90,15 +90,15 @@ def _count_items_for_establishment_and_category(conn: Connection, est_id: int, c
 def _sync_establishment_for_categories(conn: Connection, est_id: int, category_ids: Iterable[int]) -> None:
     """
     Para cada categoría en category_ids:
-    - si count >= 4 -> asegura que exista fila en establecimiento_categoria
-    - si count < 4 -> elimina la fila si existía
+    - si count >= 1 -> asegura que exista fila en establecimiento_categoria
+    - si count < 1 -> elimina la fila si existía
     """
     if est_id is None:
         return
 
     for cat_id in set(category_ids or []):
         cnt = _count_items_for_establishment_and_category(conn, est_id, cat_id)
-        if cnt >= 4:
+        if cnt >= 1:
             _insert_establishment_category(conn, est_id, cat_id)
         else:
             _delete_establishment_category_if_exists(conn, est_id, cat_id)

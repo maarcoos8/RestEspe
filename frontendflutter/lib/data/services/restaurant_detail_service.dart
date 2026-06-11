@@ -57,7 +57,7 @@ class RestaurantDetailService {
         numeroResenas:
             (puntuacionJson?['numero_resenas'] as num?)?.toInt() ?? 0,
         imagenUrl: establecimientoJson['imagen_url'] as String?,
-        propietarioId: establecimientoJson['propietario_id'] as int?,
+        responsableId: establecimientoJson['responsable_id'] as int?,
       );
     } catch (e) {
       print('Error obteniendo detalles del restaurante: $e');
@@ -84,15 +84,14 @@ class RestaurantDetailService {
     }
   }
 
-  /// Obtiene las categorías de dieta de un establecimiento.
-  /// El backend ahora devuelve las categorías con el nombre incluido.
-  /// Endpoint: GET /establecimiento_categoria/establecimiento/{id}
+  /// Obtiene las categorías de dieta de un establecimiento con conteos.
+  /// Endpoint: GET /establecimiento_categoria/establecimiento/{id}/conteo
   Future<List<dynamic>> _getCategoriasDieta(int idEstablecimiento) async {
     try {
       final response = await http
           .get(
             Uri.parse(
-              '$baseUrl/establecimiento_categoria/establecimiento/$idEstablecimiento',
+              '$baseUrl/establecimiento_categoria/establecimiento/$idEstablecimiento/conteo',
             ),
           )
           .timeout(const Duration(seconds: 5));
