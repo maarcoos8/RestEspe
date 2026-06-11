@@ -12,6 +12,7 @@ from app.models.establecimiento_tipo import EstablecimientoTipo
 from app.models.item_categoria import ItemCategoria
 from app.models.item_menu import ItemMenu
 from app.models.resena import Resena
+from app.models.usuario_establecimiento_validacion import UsuarioEstablecimientoValidacion
 from app.schemas.establecimiento import EstablecimientoCreate, EstablecimientoUpdate
 
 
@@ -30,6 +31,7 @@ def _base_establecimiento_filtrado_query(db: Session):
             Establecimiento.id_establecimiento.label("id_establecimiento"),
             Establecimiento.nombre.label("nombre"),
             Establecimiento.direccion_texto.label("direccion_texto"),
+            Establecimiento.contacto.label("contacto"),
             Establecimiento.imagen_url.label("imagen_url"),
             func.ST_Y(Establecimiento.coordenadas).label("latitud"),
             func.ST_X(Establecimiento.coordenadas).label("longitud"),
@@ -222,6 +224,7 @@ def get_establecimientos_filtrados(
                 "id_establecimiento": row.id_establecimiento,
                 "nombre": row.nombre,
                 "direccion_texto": row.direccion_texto,
+                "contacto": row.contacto,
                 "imagen_url": row.imagen_url,
                 "latitud": float(row.latitud) if row.latitud is not None else None,
                 "longitud": float(row.longitud) if row.longitud is not None else None,
@@ -329,31 +332,36 @@ def remove_establecimiento(db: Session, id_establecimiento: int) -> Optional[Est
     db.query(UsuarioEstablecimientoFavorito).filter(
         UsuarioEstablecimientoFavorito.id_establecimiento == id_establecimiento
     ).delete()
+
+    # 4. Eliminar validaciones de usuarios
+    db.query(UsuarioEstablecimientoValidacion).filter(
+        UsuarioEstablecimientoValidacion.id_establecimiento == id_establecimiento
+    ).delete()
     
-    # 4. Eliminar reseñas
+    # 5. Eliminar reseñas
     db.query(Resena).filter(
         Resena.id_establecimiento == id_establecimiento
     ).delete()
     
-    # 5. Eliminar items de menú
+    # 6. Eliminar items de menú
     from app.models.item_menu import ItemMenu
     db.query(ItemMenu).filter(
         ItemMenu.id_establecimiento == id_establecimiento
     ).delete()
     
-    # 6. Eliminar tipos de item de menú
+    # 7. Eliminar tipos de item de menú
     from app.models.tipo_item_menu import TipoItemMenu
     db.query(TipoItemMenu).filter(
         TipoItemMenu.id_establecimiento == id_establecimiento
     ).delete()
     
-    # 7. Eliminar fotografías
+    # 8. Eliminar validaciones y fotografías
     from app.models.fotografia import Fotografia
     db.query(Fotografia).filter(
         Fotografia.id_establecimiento == id_establecimiento
     ).delete()
     
-    # 8. Finalmente, eliminar el establecimiento
+    # 9. Finalmente, eliminar el establecimiento
     db.delete(obj)
     db.commit()
     

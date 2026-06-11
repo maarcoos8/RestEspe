@@ -14,6 +14,7 @@ from app.models import (  # noqa: F401
 	establecimiento_categoria,
 	establecimiento_tipo,
 	usuario_establecimiento_favorito,
+	usuario_establecimiento_validacion,
 	tipo_establecimiento,
 	tipo_item_menu,
 	item_menu,

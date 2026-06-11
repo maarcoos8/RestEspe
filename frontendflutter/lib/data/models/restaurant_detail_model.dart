@@ -5,6 +5,7 @@ class RestaurantDetail {
   const RestaurantDetail({
     required this.idEstablecimiento,
     required this.nombre,
+    required this.contacto,
     required this.direccionTexto,
     required this.coordinates,
     required this.estadoVerificado,
@@ -20,6 +21,7 @@ class RestaurantDetail {
 
   final int idEstablecimiento;
   final String nombre;
+  final String contacto;
   final String? direccionTexto;
   final LatLng? coordinates;
   final bool? estadoVerificado;

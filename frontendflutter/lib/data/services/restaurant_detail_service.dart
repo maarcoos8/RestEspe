@@ -33,6 +33,7 @@ class RestaurantDetailService {
       return RestaurantDetail(
         idEstablecimiento: establecimientoJson['id_establecimiento'] as int,
         nombre: establecimientoJson['nombre'] as String,
+        contacto: establecimientoJson['contacto'] as String? ?? '',
         direccionTexto: establecimientoJson['direccion_texto'] as String?,
         coordinates: _parseCoordinates(
           establecimientoJson['latitud'],
@@ -196,6 +197,81 @@ class RestaurantDetailService {
       verified: true,
       verifierId: usuarioId,
     );
+  }
+
+  Future<Map<String, dynamic>?> getValidationSummary(
+    int idEstablecimiento, {
+    int? userId,
+  }) async {
+    try {
+      final uri = Uri.parse(
+        '$baseUrl/establecimiento/$idEstablecimiento/validacion',
+      ).replace(
+        queryParameters: userId != null
+            ? {'id_usuario': userId.toString()}
+            : null,
+      );
+
+      final response = await http
+          .get(uri)
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      print('Error obteniendo validación: $e');
+      return null;
+    }
+  }
+
+  Future<bool> setValidationVote({
+    required int idEstablecimiento,
+    required int idUsuario,
+    required int valor,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/establecimiento/$idEstablecimiento/validacion'),
+            headers: AuthTokenStore.withAuth({
+              'Content-Type': 'application/json',
+            }),
+            body: jsonEncode({
+              'id_usuario': idUsuario,
+              'id_establecimiento': idEstablecimiento,
+              'valor': valor,
+            }),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      print('Error enviando validación: $e');
+      return false;
+    }
+  }
+
+  Future<bool> clearValidationVote({
+    required int idEstablecimiento,
+    required int idUsuario,
+  }) async {
+    try {
+      final response = await http
+          .delete(
+            Uri.parse(
+              '$baseUrl/establecimiento/$idEstablecimiento/validacion/usuario/$idUsuario',
+            ),
+            headers: AuthTokenStore.withAuth(const {}),
+          )
+          .timeout(const Duration(seconds: 8));
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Error eliminando validación: $e');
+      return false;
+    }
   }
 
   LatLng? _parseCoordinates(dynamic lat, dynamic lng) {

@@ -47,6 +47,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _scrollController = ScrollController();
   final _nombreController = TextEditingController();
+  final _contactoController = TextEditingController();
   final _direccionController = TextEditingController();
   final _latitudController = TextEditingController();
   final _longitudController = TextEditingController();
@@ -58,6 +59,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
 
   final CreateEstablishmentForm _formData = CreateEstablishmentForm(
     nombre: '',
+    contacto: '',
     tiposEstablecimientoIds: [],
   );
 
@@ -135,6 +137,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
     setState(() {
       // Cargar campos básicos
       _nombreController.text = _restaurantToEdit!.nombre;
+      _contactoController.text = _restaurantToEdit!.contacto;
       _direccionController.text = _restaurantToEdit!.direccionTexto ?? '';
 
       if (_restaurantToEdit!.coordinates != null) {
@@ -201,6 +204,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
     _responsableSearchTimer?.cancel();
     _scrollController.dispose();
     _nombreController.dispose();
+    _contactoController.dispose();
     _direccionController.dispose();
     _latitudController.dispose();
     _longitudController.dispose();
@@ -644,6 +648,7 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
     try {
       // Actualizar datos del formulario
       _formData.nombre = _nombreController.text.trim();
+      _formData.contacto = _contactoController.text.trim();
       _formData.direccionTexto = _direccionController.text.trim();
       _formData.tiposEstablecimientoIds = _tiposSeleccionados.toList();
 
@@ -756,6 +761,32 @@ class _CreateEstablishmentScreenState extends State<CreateEstablishmentScreen> {
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return 'El nombre es requerido';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Información de contacto',
+                        style: Theme.of(context).textTheme.titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _contactoController,
+                        decoration: InputDecoration(
+                          hintText: 'Correo/teléfono de contacto',
+                          hintStyle: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: const Color(0xFF9E9E9E)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          filled: true,
+                          fillColor: const Color(AppColors.white),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'El contacto es requerido';
                           }
                           return null;
                         },

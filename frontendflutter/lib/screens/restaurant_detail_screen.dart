@@ -48,6 +48,11 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       RestaurantDetailService();
   final ReviewService _reviewService = ReviewService();
   bool _isReloading = false;
+  bool _isLoadingValidation = false;
+  bool _isSubmittingValidation = false;
+  int _likesCount = 0;
+  int _dislikesCount = 0;
+  int? _currentUserVote;
   bool _wasEdited = false; // Bandera para rastrear si se edit+¦
   String _selectedTab = 'menu'; // 'menu', 'resenas', 'imagenes'
   List<ReviewModel> _reviews = [];
@@ -97,6 +102,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     );
     _reviewScrollController.addListener(_onReviewScroll);
     _loadMenu();
+    _loadValidationSummary();
   }
 
   @override
@@ -120,14 +126,14 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   /// Carga m+ís rese+¦as al hacer scroll
   void _onReviewScroll() {
     if (_reviewScrollController.position.pixels >=
-      _reviewScrollController.position.maxScrollExtent - 200 &&
+            _reviewScrollController.position.maxScrollExtent - 200 &&
         !_isLoadingReviews &&
         _hasMoreReviews) {
       _loadMoreReviews();
     }
   }
 
-  /// Carga rese+¦as iniciales
+  /// Carga reseñas iniciales
   Future<void> _loadInitialReviews() async {
     if (_isLoadingReviews) return;
 
@@ -162,7 +168,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     }
   }
 
-  /// Carga m+ís rese+¦as (infinite scroll)
+  /// Carga más reseñas (infinite scroll)
   Future<void> _loadMoreReviews() async {
     setState(() {
       _isLoadingReviews = true;
@@ -209,6 +215,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           _currentRestaurant = updatedRestaurant;
           _wasEdited = true; // Marcar que se edit+¦ exitosamente
         });
+        await _loadValidationSummary();
       }
     } catch (e) {
       // Error silent - revisar logs si es necesario
@@ -219,6 +226,121 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
         });
       }
     }
+  }
+
+  Future<void> _loadValidationSummary() async {
+    if (!mounted) return;
+
+    final currentUser = context.read<AuthProvider>().currentUser;
+
+    setState(() {
+      _isLoadingValidation = true;
+    });
+
+    final summary = await _restaurantDetailService.getValidationSummary(
+      _currentRestaurant.idEstablecimiento,
+      userId: currentUser?.idUsuario,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _likesCount = (summary?['likes'] as num?)?.toInt() ?? 0;
+      _dislikesCount = (summary?['dislikes'] as num?)?.toInt() ?? 0;
+      _currentUserVote = (summary?['current_user_vote'] as num?)?.toInt();
+      _isLoadingValidation = false;
+    });
+  }
+
+  Future<void> _toggleValidationVote(int valor) async {
+    if (_isSubmittingValidation) return;
+
+    final currentUser = context.read<AuthProvider>().currentUser;
+    if (currentUser == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Debes iniciar sesión para validar un establecimiento'),
+          backgroundColor: Color(AppColors.errorRed),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSubmittingValidation = true;
+    });
+
+    final bool success;
+    if (_currentUserVote == valor) {
+      success = await _restaurantDetailService.clearValidationVote(
+        idEstablecimiento: _currentRestaurant.idEstablecimiento,
+        idUsuario: currentUser.idUsuario,
+      );
+    } else {
+      success = await _restaurantDetailService.setValidationVote(
+        idEstablecimiento: _currentRestaurant.idEstablecimiento,
+        idUsuario: currentUser.idUsuario,
+        valor: valor,
+      );
+    }
+
+    if (success) {
+      await _loadValidationSummary();
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo guardar tu validación'),
+          backgroundColor: Color(AppColors.errorRed),
+        ),
+      );
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isSubmittingValidation = false;
+    });
+  }
+
+  Widget _buildValidationButton({
+    required IconData icon,
+    required int value,
+    required int count,
+    required Color activeColor,
+  }) {
+    final isActive = _currentUserVote == value;
+
+    return Expanded(
+      child: OutlinedButton.icon(
+        onPressed: _isLoadingValidation || _isSubmittingValidation
+            ? null
+            : () => _toggleValidationVote(value),
+        icon: Icon(
+          icon,
+          size: 18,
+          color: isActive ? activeColor : const Color(AppColors.lightText),
+        ),
+        label: Text(
+          '$count',
+          style: TextStyle(
+            color: isActive ? activeColor : const Color(AppColors.darkText),
+            fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(
+            color: isActive ? activeColor : const Color(0x2F000000),
+          ),
+          backgroundColor: isActive
+              ? activeColor.withValues(alpha: 0.08)
+              : const Color(AppColors.white),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
   }
 
   /// Recarga el detalle del restaurante y el menú tras una mutación.
@@ -636,6 +758,84 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                                   )
                                   .toList(),
                             ),
+                          if (_currentRestaurant.contacto.trim().isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        TextSpan(
+                                          text: 'Contacto: ',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleSmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w700,
+                                                color: const Color(
+                                                  AppColors.darkText,
+                                                ),
+                                              ),
+                                        ),
+                                        TextSpan(
+                                          text: _currentRestaurant.contacto,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: const Color(
+                                                  AppColors.lightText,
+                                                ),
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  onPressed: () async {
+                                    await Clipboard.setData(
+                                      ClipboardData(
+                                        text: _currentRestaurant.contacto,
+                                      ),
+                                    );
+
+                                    if (!mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Contacto copiado al portapapeles',
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(
+                                    Icons.copy_outlined,
+                                    size: 17,
+                                    color: Color(AppColors.primaryGreen),
+                                  ),
+                                  tooltip: 'Copiar contacto',
+                                  padding: const EdgeInsets.all(4),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 28,
+                                    minHeight: 28,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            const Divider(
+                              height: 1,
+                              thickness: 1,
+                              color: Color(0x1F000000),
+                            ),
+                          ],
                           const SizedBox(height: 18),
                           if (_currentRestaurant.estadoVerificado == true &&
                               _currentRestaurant.ultimaVerificacion != null)
@@ -680,6 +880,38 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                                 ),
                               ],
                             ),
+                          const SizedBox(height: 14),
+                          Text(
+                            'Validación por usuarios',
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Confirma si la información y oferta del establecimiento corresponde con la realidad.',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: const Color(AppColors.lightText),
+                                ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              _buildValidationButton(
+                                icon: Icons.thumb_up_alt_outlined,
+                                value: 1,
+                                count: _likesCount,
+                                activeColor: const Color(AppColors.successGreen),
+                              ),
+                              const SizedBox(width: 10),
+                              _buildValidationButton(
+                                icon: Icons.thumb_down_alt_outlined,
+                                value: -1,
+                                count: _dislikesCount,
+                                activeColor: const Color(AppColors.errorRed),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -1469,6 +1701,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                             idEstablecimiento:
                                 _currentRestaurant.idEstablecimiento,
                             nombre: _currentRestaurant.nombre,
+                            contacto: _currentRestaurant.contacto,
                             direccionTexto: _currentRestaurant.direccionTexto,
                             coordinates: _currentRestaurant.coordinates,
                             estadoVerificado:
@@ -1769,6 +2002,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           _currentRestaurant = RestaurantDetail(
             idEstablecimiento: _currentRestaurant.idEstablecimiento,
             nombre: _currentRestaurant.nombre,
+            contacto: _currentRestaurant.contacto,
             direccionTexto: _currentRestaurant.direccionTexto,
             coordinates: _currentRestaurant.coordinates,
             estadoVerificado: _currentRestaurant.estadoVerificado,
@@ -1788,6 +2022,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           _currentRestaurant = RestaurantDetail(
             idEstablecimiento: _currentRestaurant.idEstablecimiento,
             nombre: _currentRestaurant.nombre,
+            contacto: _currentRestaurant.contacto,
             direccionTexto: _currentRestaurant.direccionTexto,
             coordinates: _currentRestaurant.coordinates,
             estadoVerificado: _currentRestaurant.estadoVerificado,

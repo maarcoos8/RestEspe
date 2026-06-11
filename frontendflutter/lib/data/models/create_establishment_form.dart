@@ -1,6 +1,7 @@
 /// Modelo DTO para el formulario de creación de establecimiento.
 class CreateEstablishmentForm {
   String nombre;
+  String contacto;
   String? direccionTexto;
   String? imagenUrl;
   double? latitud;
@@ -10,6 +11,7 @@ class CreateEstablishmentForm {
 
   CreateEstablishmentForm({
     required this.nombre,
+    required this.contacto,
     this.direccionTexto,
     this.imagenUrl,
     this.latitud,
@@ -23,6 +25,7 @@ class CreateEstablishmentForm {
   Map<String, dynamic> toJson() {
     final json = {
       'nombre': nombre,
+      'contacto': contacto,
       'direccion_texto': direccionTexto,
       'imagen_url': imagenUrl,
       'latitud': latitud,
@@ -37,6 +40,10 @@ class CreateEstablishmentForm {
 
   /// Verifica si el formulario es válido (campos requeridos llenos).
   bool isValid() {
-    return nombre.isNotEmpty && imagenUrl != null && latitud != null && longitud != null;
+    return nombre.isNotEmpty &&
+        contacto.isNotEmpty &&
+        imagenUrl != null &&
+        latitud != null &&
+        longitud != null;
   }
 }

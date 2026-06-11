@@ -12,6 +12,11 @@ from app.schemas.establecimiento import (
     EstablecimientoUpdate,
 )
 from app.schemas.establecimiento_filtro import EstablecimientoFiltroOut, PuntuacionMediaOut
+from app.schemas.usuario_establecimiento_validacion import (
+    UsuarioEstablecimientoValidacionCreate,
+    UsuarioEstablecimientoValidacionOut,
+    UsuarioEstablecimientoValidacionResumenOut,
+)
 from sqlalchemy import select
 from sqlalchemy import func as sa_func
 
@@ -58,6 +63,7 @@ def leer_establecimientos(skip: int = 0, limit: int = 100, db: Session = Depends
             Establecimiento.id_establecimiento,
             Establecimiento.nombre,
             Establecimiento.direccion_texto,
+            Establecimiento.contacto,
             Establecimiento.imagen_url,
             sa_func.ST_X(Establecimiento.coordenadas).label("longitud"),
             sa_func.ST_Y(Establecimiento.coordenadas).label("latitud"),
@@ -77,7 +83,8 @@ def leer_establecimientos(skip: int = 0, limit: int = 100, db: Session = Depends
                 "id_establecimiento": r.id_establecimiento,
                 "nombre": r.nombre,
                 "direccion_texto": r.direccion_texto,
-                    "imagen_url": r.imagen_url,
+                "contacto": r.contacto,
+                "imagen_url": r.imagen_url,
                 "latitud": float(r.latitud) if r.latitud is not None else None,
                 "longitud": float(r.longitud) if r.longitud is not None else None,
                 "estado_verificado": r.estado_verificado,
@@ -95,6 +102,7 @@ def leer_establecimiento(id: int, db: Session = Depends(get_db)):
         Establecimiento.id_establecimiento,
         Establecimiento.nombre,
         Establecimiento.direccion_texto,
+        Establecimiento.contacto,
         Establecimiento.imagen_url,
         sa_func.ST_X(Establecimiento.coordenadas).label("longitud"),
         sa_func.ST_Y(Establecimiento.coordenadas).label("latitud"),
@@ -111,6 +119,7 @@ def leer_establecimiento(id: int, db: Session = Depends(get_db)):
         "id_establecimiento": row.id_establecimiento,
         "nombre": row.nombre,
         "direccion_texto": row.direccion_texto,
+        "contacto": row.contacto,
         "imagen_url": row.imagen_url,
         "latitud": float(row.latitud) if row.latitud is not None else None,
         "longitud": float(row.longitud) if row.longitud is not None else None,
@@ -158,6 +167,54 @@ def actualizar_establecimiento(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     return updated
+
+
+@router.get("/{id}/validacion", response_model=UsuarioEstablecimientoValidacionResumenOut)
+def leer_validacion_establecimiento(
+    id: int,
+    id_usuario: Optional[int] = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    obj = crud.crud_establecimiento.get_establecimiento(db, id)
+    if not obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Establecimiento no encontrado")
+
+    return crud.crud_usuario_establecimiento_validacion.get_resumen_validacion(db, id, id_usuario)
+
+
+@router.post("/{id}/validacion", response_model=UsuarioEstablecimientoValidacionOut, status_code=status.HTTP_201_CREATED)
+def crear_o_actualizar_validacion_establecimiento(
+    id: int,
+    validacion_in: UsuarioEstablecimientoValidacionCreate,
+    db: Session = Depends(get_db),
+):
+    if id != validacion_in.id_establecimiento:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El id del establecimiento no coincide",
+        )
+
+    try:
+        return crud.crud_usuario_establecimiento_validacion.set_validacion(
+            db,
+            validacion_in.id_usuario,
+            validacion_in.id_establecimiento,
+            validacion_in.valor,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.delete("/{id}/validacion/usuario/{id_usuario}", response_model=UsuarioEstablecimientoValidacionOut)
+def eliminar_validacion_establecimiento(
+    id: int,
+    id_usuario: int,
+    db: Session = Depends(get_db),
+):
+    obj = crud.crud_usuario_establecimiento_validacion.remove_validacion(db, id_usuario, id)
+    if not obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Validación no encontrada")
+    return obj
 
 
 @router.delete("/{id}", response_model=EstablecimientoOut)

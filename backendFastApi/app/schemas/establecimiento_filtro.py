@@ -9,6 +9,7 @@ class EstablecimientoFiltroOut(BaseModel):
     id_establecimiento: int
     nombre: str
     direccion_texto: Optional[str] = None
+    contacto: Optional[str] = None
     imagen_url: Optional[str] = None
     latitud: Optional[float] = None
     longitud: Optional[float] = None

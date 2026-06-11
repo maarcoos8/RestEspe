@@ -8,6 +8,14 @@ class ImageUploadService {
 
   ImageUploadService({required this.baseUrl});
 
+  static Map<String, String> _authHeadersOrThrow([Map<String, String> base = const {}]) {
+    final token = AuthTokenStore.idToken;
+    if (token == null || token.isEmpty) {
+      throw Exception('Sesión no válida. Inicia sesión de nuevo.');
+    }
+    return AuthTokenStore.withAuth(base);
+  }
+
   /// Valida que el archivo de imagen sea válido.
   /// Comprueba que existe y que tiene un tamaño razonable.
   static Future<String?> validateImageFile(File imageFile) async {
@@ -57,7 +65,7 @@ class ImageUploadService {
 
     try {
       final request = http.MultipartRequest('POST', uri);
-      request.headers.addAll(AuthTokenStore.withAuth(const {}));
+      request.headers.addAll(_authHeadersOrThrow());
       request.fields['id_establecimiento'] = idEstablecimiento.toString();
       request.fields['id_usuario'] = idUsuario.toString();
 
@@ -80,6 +88,10 @@ class ImageUploadService {
         } catch (e) {
           throw Exception('Error procesando respuesta del servidor: $e');
         }
+      }
+
+      if (resp.statusCode == 401) {
+        throw Exception('Sesión expirada o inválida. Cierra sesión e inicia sesión de nuevo.');
       }
 
       // Manejo básico de errores
@@ -111,7 +123,7 @@ class ImageUploadService {
 
     try {
       final request = http.MultipartRequest('POST', uri);
-      request.headers.addAll(AuthTokenStore.withAuth(const {}));
+      request.headers.addAll(_authHeadersOrThrow());
       request.files.add(
         await http.MultipartFile.fromPath('file', imageFile.path),
       );
@@ -127,6 +139,10 @@ class ImageUploadService {
         } catch (e) {
           throw Exception('Error procesando respuesta del servidor: $e');
         }
+      }
+
+      if (resp.statusCode == 401) {
+        throw Exception('Sesión expirada o inválida. Cierra sesión e inicia sesión de nuevo.');
       }
 
       throw Exception(

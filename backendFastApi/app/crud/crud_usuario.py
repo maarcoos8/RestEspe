@@ -6,6 +6,7 @@ from app.models.usuario import Usuario
 from app.models.resena import Resena
 from app.models.fotografia import Fotografia
 from app.models.usuario_establecimiento_favorito import UsuarioEstablecimientoFavorito
+from app.models.usuario_establecimiento_validacion import UsuarioEstablecimientoValidacion
 from app.core.roles import DEFAULT_ROLE_ID
 from app.schemas.usuario import UsuarioUpdate
 
@@ -75,6 +76,11 @@ def remove_usuario(db: Session, id_usuario: int) -> Optional[Usuario]:
     # Eliminar todos los favoritos del usuario
     db.query(UsuarioEstablecimientoFavorito).filter(
         UsuarioEstablecimientoFavorito.id_usuario == id_usuario
+    ).delete()
+
+    # Eliminar todas las validaciones de establecimientos del usuario
+    db.query(UsuarioEstablecimientoValidacion).filter(
+        UsuarioEstablecimientoValidacion.id_usuario == id_usuario
     ).delete()
     
     # Luego eliminar el usuario
