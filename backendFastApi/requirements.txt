@@ -10,3 +10,4 @@ google-auth
 requests
 cloudinary
 python-multipart
+shapely

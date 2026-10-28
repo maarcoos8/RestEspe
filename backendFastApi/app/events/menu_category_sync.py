@@ -180,7 +180,12 @@ def item_menu_before_delete(mapper, connection: Connection, target: ItemMenu):
     Capturamos las categorías del item ANTES de que se borre, y las guardamos temporalmente
     en un atributo en memoria del objeto (no persistente) para usarlo en after_delete.
     """
-    cats = _get_categories_of_item(connection, target.id_item_menu)
+    # Si la relación `categorias` está cargada, SQLAlchemy ya ha borrado las filas de item_categoria
+    # en este mismo flush, así que las categorías se toman de memoria en lugar de consultarlas
+    if "categorias" not in inspect(target).unloaded:
+        cats = [c.id_categoria for c in target.categorias]
+    else:
+        cats = _get_categories_of_item(connection, target.id_item_menu)
     # Guardamos en atributo temporal para after_delete
     try:
         setattr(target, "_cached_item_categories", cats)

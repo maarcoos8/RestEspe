@@ -1,8 +1,11 @@
 # --- BACKEND (Python/FastAPI) ---
 backendFastApi/.env
 backendFastApi/venv/
-backendFastApi/__pycache__/
+__pycache__/
 *.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
 
 # --- FRONTEND (Flutter) ---
 # Ignora las carpetas de construcción y herramientas de Dart
@@ -34,7 +37,6 @@ Thumbs.db
 # Autoskills / AI Agents
 .agents/
 skills-lock.json
-.github
 # AI agent instructions
 AGENTS.md
 *_PROMPT.md
