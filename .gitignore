@@ -35,3 +35,6 @@ Thumbs.db
 .agents/
 skills-lock.json
 .github
+# AI agent instructions
+AGENTS.md
+*_PROMPT.md
