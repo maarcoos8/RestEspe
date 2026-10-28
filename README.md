@@ -32,9 +32,9 @@ PinFood is a mobile app for people with specific dietary needs. It shows nearby 
     <td align="center"><img src="docs/screenshots/detail.png" width="220" alt="Restaurant detail"><br><sub>Restaurant detail</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/screenshots/menu.png" width="220" alt="Menu with diet tags"><br><sub>Menu and diet tags</sub></td>
     <td align="center"><img src="docs/screenshots/reviews.png" width="220" alt="Reviews"><br><sub>Reviews</sub></td>
     <td align="center"><img src="docs/screenshots/admin.png" width="220" alt="Admin panel"><br><sub>Admin panel</sub></td>
-    <td></td>
   </tr>
 </table>
 
